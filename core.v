@@ -11,9 +11,6 @@ module core(input reset_i,
 	    	output [10:0] data_addr_o,
 	    	output [31:0] data_o); //active-low reset. all write_enable signals are also active-low.
 				  
-	  //sram_1rw1r_32_512_8_freepdk45 memory(.clk0(clk_i), .csb0(!reset_i), .web0(wen_MEM_r), .wmask0(wmask0), .addr0(aluout_EX[10:2]), .din0(mux4_o_EX), .dout0(memout_MEM), //port 1 is for data memory
-	 						//			   .clk1(clk_i), .csb1(1'b0), .web1(wen_i), .wmask1(4'b1111), .addr1(mux_addr_o2[10:2]), .din1(instr_i), .dout1(instr_IF)); //port 2 is for instruction memory
-
 //IF signals------------------------------------------------------------
 wire [31:0] muxpc_o, plus4_o; //pc-mux output, pc+4 output.
 wire [31:0] addr_cal_o; // address calculation output
