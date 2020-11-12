@@ -1,13 +1,13 @@
 `timescale 1ns/10ps
 
 //output fields
-`define WB 		 WB_o
+`define WB       WB_o
 `define MEM_MUX  MEM_o[5:4]
 `define MEM_SIGN MEM_o[3]
 `define MEM_LEN  MEM_o[2:1]
 `define MEM_WEN  MEM_o[0]
-`define B 		 EX_o[8]
-`define J 		 EX_o[7]
+`define B        EX_o[8]
+`define J        EX_o[7]
 `define EX_MUX3  EX_o[6]
 `define EX_MUX2  EX_o[5]
 `define EX_MUX1  EX_o[4]
