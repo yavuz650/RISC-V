@@ -24,9 +24,9 @@
 `define imm_MEM    2'd2
 
 module control_unit(input [14:0] control_i, //instr[31:25|14:12|6:2]
-					output reg WB_o,
-					output reg [5:0] MEM_o,
-					output reg [8:0] EX_o);
+                    output reg WB_o,
+                    output reg [5:0] MEM_o,
+                    output reg [8:0] EX_o);
 			
 always @*
 begin

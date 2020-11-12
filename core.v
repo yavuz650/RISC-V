@@ -15,8 +15,8 @@ module core(input reset_i,
 //IF signals------------------------------------------------------------
 wire [31:0] muxpc_o, plus4_o; //pc-mux output, pc+4 output.
 wire [31:0] addr_cal_o; // address calculation output
-wire 		muxpc_ctrl; //pc-mux control signal. it is also controls the flush mechanism.
-reg [31:0] 	pc_o; //pc out
+wire        muxpc_ctrl; //pc-mux control signal. it is also controls the flush mechanism.
+reg [31:0]  pc_o; //pc out
 wire [10:0] mux_addr_o, mux_load_o, mux_addr_o2;
 wire [31:0] instr_IF;
 wire 		IFID_preg_wen; //IF/ID pipeline register write enable signal.
@@ -25,8 +25,8 @@ reg [31:0] IFID_preg_instr;
 reg [31:0] IFID_preg_pc;
 //----------------------------------------------------------------------
 //ID signals
-wire [4:0] 	 rs1_ID, rs2_ID, rd_ID; //register addresses
-wire [31:0]	 data1_ID, data2_ID;
+wire [4:0]   rs1_ID, rs2_ID, rd_ID; //register addresses
+wire [31:0]  data1_ID, data2_ID;
 wire [14:0]  ctrl_unit_i; //control unit input
 wire [29:0]  imm_dec_i; //immediate decoder input
 //control unit outputs
@@ -34,10 +34,10 @@ wire         ctrl_unit_wb_o;
 wire [5:0]   ctrl_unit_mem_o;
 wire [8:0]   ctrl_unit_ex_o;
 wire [31:0]  imm_dec_o, pc_ID; //immediate decoder output, pc value
-wire 		 mux_ctrl_ID; //control signal for all three muxes
-wire 		 mux1_o_ID; //WB field
-wire [5:0] 	 mux2_o_ID; //MEM field
-wire [8:0] 	 mux3_o_ID; //EX field
+wire         mux_ctrl_ID; //control signal for all three muxes
+wire         mux1_o_ID; //WB field
+wire [5:0]   mux2_o_ID; //MEM field
+wire [8:0]   mux3_o_ID; //EX field
 //pipeline register
 reg [31:0] IDEX_preg_imm;
 reg [4:0]  IDEX_preg_rd, IDEX_preg_rs2, IDEX_preg_rs1;
