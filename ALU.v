@@ -7,6 +7,8 @@ module ALU(	input [31:0] src1,
 		output reg [31:0] alu_out
 		);
 
+wire [4:0] shamt;
+assign shamt = src2[4:0];
 
 always @*
 begin
@@ -18,9 +20,9 @@ begin
 		4'b0100 : alu_out = src1 & src2; //AND
 		4'b0101 : alu_out = (src1 < src2) ? 32'd1 : 32'd0; //set-less-than (unsigned)
 		4'b0110 : alu_out = ($signed(src1) < $signed(src2)) ? 32'd1 : 32'd0; //set-less-than (signed)
-		4'b0111 : alu_out = src1 << src2; //shift left	
-		4'b1000 : alu_out = src1 >> src2; //shift right	
-		4'b1001 : alu_out = src1 >>> src2; //shift right arithmetical
+		4'b0111 : alu_out = src1 << shamt; //shift left	
+		4'b1000 : alu_out = src1 >> shamt; //shift right	
+		4'b1001 : alu_out = src1 >>> shamt; //shift right arithmetical
 		4'b1010 : alu_out = (src1 == src2) ? 32'd1 : 32'd0; // set if equal
 		4'b1011 : alu_out = (src1 == src2) ? 32'd0 : 32'd1; // set if not equal
 		4'b1100 : alu_out = (src1 >= src2) ? 32'd1 : 32'd0; // set if greater or equal (unsigned)

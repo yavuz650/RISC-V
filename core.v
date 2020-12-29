@@ -1,4 +1,4 @@
-`timescale 1ns/10ps
+`timescale 1ns/1ps
 
 module core(input reset_i,
             input clk_i,
@@ -16,8 +16,9 @@ module core(input reset_i,
 wire [31:0] muxpc_o, plus4_o; //pc-mux output, pc+4 output.
 wire [31:0] addr_cal_o; // address calculation output
 wire        muxpc_ctrl; //pc-mux control signal. it is also controls the flush mechanism.
+wire [31:0] pc_i; //pc in
 reg [31:0]  pc_o; //pc out
-wire [10:0] mux_addr_o, mux_load_o, mux_addr_o2;
+wire [10:0] mux_addr_o1, mux_load_o, mux_addr_o2;
 wire [31:0] instr_IF;
 wire        IFID_preg_wen; //IF/ID pipeline register write enable signal.
 //pipeline register
@@ -96,11 +97,10 @@ wire [31:0] memout_WB;
 //----------------------------------------------------------------------
 
 //IF STAGE---------------------------------------------------------------------------------
-//assign mux_load_o = wen_i ? pc_o[10:0] : addr_i;
-assign mux_addr_o = muxpc_ctrl ? pc_o[10:0] : addr_cal_o[10:0];
-assign mux_addr_o2 = IFID_preg_wen ? mux_addr_o - 11'd4 : mux_addr_o;
-assign instr_addr_o = mux_addr_o2;
-
+assign mux_addr_o1 = muxpc_ctrl ? pc_o[10:0] + 11'd4 : addr_cal_o[10:0];
+assign mux_addr_o2 = IFID_preg_wen ? pc_o[10:0] : mux_addr_o1;
+assign pc_i = reset_i ? mux_addr_o2 : 32'h0;
+assign instr_addr_o = pc_i[10:0];
 always @(posedge clk_i or negedge reset_i) 
 begin
 	if(!reset_i)
@@ -112,22 +112,17 @@ begin
 	
 	else if(!muxpc_ctrl) //branch taken. next address comes from the address calculation output.
 	begin
-		IFID_preg_instr <= 32'h13; //flush the register
-		IFID_preg_pc    <= addr_cal_o;
-		pc_o <= addr_cal_o + 32'd4;
+		{IFID_preg_pc, IFID_preg_instr} <= 64'h13;
+		pc_o <= pc_i;
 	end
 		
 	else
 	begin
 		if(!IFID_preg_wen) //stall the pipe if necessary
 		begin
-			if(pc_o == 32'h0)
-				IFID_preg_instr <= 32'h13;
-			else
-				IFID_preg_instr <= instr_i;
-				
-			IFID_preg_pc <= pc_o - 32'd4 ;
-			pc_o <= pc_o + 32'd4;
+			IFID_preg_instr <= instr_i;	
+			IFID_preg_pc <= pc_o;
+			pc_o <= pc_i;
 		end
 	end
 end
