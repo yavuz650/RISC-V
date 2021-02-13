@@ -16,6 +16,7 @@ begin
 		5'b00100 : imm_out = { {21{ instr_in[29] }}, instr_in[28:23], instr_in[22:19], instr_in[18] };// I-type
 		5'b11000 : imm_out = { {20{ instr_in[29] }}, instr_in[5], instr_in[28:23], instr_in[9:6], 1'b0 };// B-type
 		5'b01000 : imm_out = { {21{ instr_in[29] }}, instr_in[28:23], instr_in[9:6], instr_in[5] };// S-type
+		5'b11100 : imm_out = { 27'b0, instr_in[17:13] }; // CSR immediate
 		
 		default    : imm_out = 32'b0;
 	endcase
