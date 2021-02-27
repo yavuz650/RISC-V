@@ -9,7 +9,6 @@ module mtime_registers(input reset_i, csb_i, wen_i, clk_i,
                        output reg [31:0] data_o);
 
 reg [63:0] mtime, mtimecmp;
-//reg [cntr_len-1:0] intermediate_counter;
 
 wire [3:0] byte_addr [3:0]; //byte addresses
 wire e_h, l_h, l_l; //greater than, equal and less than for the upper and lower 32 bits (high and low). 

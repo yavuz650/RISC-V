@@ -11,11 +11,11 @@ module core(input reset_i, //active-low reset. all write_enable signals are also
             input [31:0] instr_i,
             input [31:0] data_i,
 	    	
-            output [3:0]  wmask0_o,
+            output reg [3:0]  wmask0_o,
             output        wen0_o,
             output [31:0] instr_addr_o,
             output [31:0] data_addr_o,
-            output [31:0] data_o,
+            output reg [31:0] data_o,
             output irq_ack_o); 
 				  
 
@@ -70,6 +70,7 @@ reg [6:0]  IDEX_preg_wb;
 reg [11:0] IDEX_preg_csr_addr;
 reg IDEX_preg_dummy;
 reg IDEX_preg_mret;
+reg IDEX_preg_misaligned;
 
 reg [31:0] register_bank [31:0]; //32x32 register file
 //----------------------------------------------------------------------
@@ -87,6 +88,7 @@ wire [1:0]  alu_func2;
 wire [31:0] aluout_EX, csr_reg_EX;
 wire        J, B, L; //jump, branch, load
 wire [11:0] csr_addr_EX;
+wire        alu_misaligned, load_store_misaligned;
 //pipeline register
 reg [31:0] EXMEM_preg_imm;
 reg [4:0]  EXMEM_preg_rd;
@@ -96,8 +98,10 @@ reg [31:0] EXMEM_preg_pc;
 reg [11:0] EXMEM_preg_csr_addr;
 reg [2:0]  EXMEM_preg_mem;
 reg [6:0]  EXMEM_preg_wb;
-reg EXMEM_preg_dummy;
-reg EXMEM_preg_mret;
+reg        EXMEM_preg_dummy;
+reg        EXMEM_preg_mret;
+reg        EXMEM_preg_misaligned;
+reg [1:0]  EXMEM_preg_addr_bits;
 
 //----------------------------------------------------------------------
 //MEM signals-----------------------------------------------------------
@@ -112,6 +116,8 @@ wire [11:0] csr_addr_MEM;
 //internal nets
 wire       wen_MEM;
 wire [1:0] ls_length_MEM;
+reg [31:0] memout;
+wire [1:0] addr_bits;
 //pipeline register
 reg [4:0]  MEMWB_preg_rd;
 reg [31:0] MEMWB_preg_memout; //input from memory is assumed to be registered.
@@ -119,6 +125,7 @@ reg [31:0] MEMWB_preg_aluout, MEMWB_preg_imm;
 reg [11:0] MEMWB_preg_csr_addr;
 reg [6:0]  MEMWB_preg_wb;
 reg        MEMWB_preg_mret;
+reg        MEMWB_preg_misaligned;
 //----------------------------------------------------------------------
 //WB signals------------------------------------------------------------
 wire [4:0]  rd_WB;
@@ -156,6 +163,7 @@ csr_unit CSR_UNIT(.clk_i(clk_i), .reset_i(reset_i),
                   .csr_reg_i(imm_WB),
                   .csr_wen_i(csr_wen_WB), .meip_i(meip_i), .mtip_i(mtip_i), .muxpc_ctrl_i(muxpc_ctrl),
                   .mret_id_i(mret_id), .mret_wb_i(MEMWB_preg_mret),
+                  .misaligned_ex(IDEX_preg_misaligned),
 
                   .csr_reg_o(csr_reg_EX), .mepc_o(mepc),
                   .irq_addr_o(irq_addr),
@@ -164,7 +172,7 @@ csr_unit CSR_UNIT(.clk_i(clk_i), .reset_i(reset_i),
                   .csr_if_flush_o(csr_if_flush), .csr_id_flush_o(csr_id_flush), .csr_ex_flush_o(csr_ex_flush), .csr_mem_flush_o(csr_mem_flush));
 
 //IF STAGE---------------------------------------------------------------------------------
-assign mux_addr_o1 = IFID_preg_wen ? pc_o : pc_o + 32'd4;
+assign mux_addr_o1 = (IFID_preg_wen | load_store_misaligned) ? pc_o : pc_o + 32'd4;
 assign mux_addr_o2 = muxpc_ctrl ? mux_addr_o1 : addr_cal_o;
 assign mux4_o_IF = mux4_ctrl_IF ? mux_addr_o2 : mux1_o_IF;
 assign mux1_o_IF = mux1_ctrl_IF ? mepc : irq_addr;
@@ -191,7 +199,7 @@ begin
 		
 	else
 	begin
-		if(!IFID_preg_wen) //stall the pipe if necessary
+		if(!IFID_preg_wen & !load_store_misaligned) //stall the pipe if necessary
 		begin
 			IFID_preg_instr <= instr_i;	
 			IFID_preg_pc <= pc_o;
@@ -249,6 +257,7 @@ begin
 		{IDEX_preg_wb, IDEX_preg_mem, IDEX_preg_csr_addr, IDEX_preg_ex, IDEX_preg_pc, IDEX_preg_data1, IDEX_preg_data2, IDEX_preg_rs1, IDEX_preg_rs2, IDEX_preg_rd, IDEX_preg_imm}  <= {7'h0c,3'b1,170'b0};
 		IDEX_preg_dummy <= 1'b0;
 		IDEX_preg_mret <= 1'b0;
+		IDEX_preg_misaligned <= 1'b0;
 	end
 		
 	else if(!muxpc_ctrl | csr_id_flush) //flush the pipe
@@ -256,6 +265,22 @@ begin
 		{IDEX_preg_wb, IDEX_preg_mem, IDEX_preg_csr_addr, IDEX_preg_ex, IDEX_preg_pc, IDEX_preg_data1, IDEX_preg_data2, IDEX_preg_rs1, IDEX_preg_rs2, IDEX_preg_rd, IDEX_preg_imm}  <= {7'h0c,3'b1,170'b0};
 		IDEX_preg_dummy <= 1'b1;
 		IDEX_preg_mret <= 1'b0;
+		IDEX_preg_misaligned <= 1'b0;
+	end
+	
+	else if(load_store_misaligned)
+	begin
+		IDEX_preg_misaligned <= 1'b1;
+		
+		if(IDEX_preg_rs1 == 5'b0)
+			IDEX_preg_data1 <= 32'b0;
+		else
+			IDEX_preg_data1 <= register_bank[IDEX_preg_rs1];
+		
+		if(IDEX_preg_rs2 == 5'b0)
+			IDEX_preg_data2 <= 32'b0;
+		else
+			IDEX_preg_data2 <= register_bank[IDEX_preg_rs2];		
 	end
 	
 	else
@@ -270,6 +295,7 @@ begin
 		IDEX_preg_wb  <= mux1_o_ID;
 		IDEX_preg_csr_addr <= csr_addr_ID;
 		IDEX_preg_mret <= mret_id;
+		IDEX_preg_misaligned <= 1'b0;
 		
 		if(!IFID_preg_wen)
 			IDEX_preg_dummy <= IFID_preg_dummy;
@@ -291,7 +317,7 @@ end
 //END ID STAGE-----------------------------------------------------------------------------
 
 //EX STAGE---------------------------------------------------------------------------------
-hazard_detection_unit HZRD_DET_UNIT (.rs1(rs1_ID), .rs2(rs2_ID), .idex_rd(rd_EX), .idex_mem(L), .id_mux(mux_ctrl_ID), .ifid_write_en(IFID_preg_wen));
+hazard_detection_unit HZRD_DET_UNIT (.rs1(rs1_ID), .rs2(rs2_ID), .opcode(IFID_preg_instr[6:2]), .funct3(IFID_preg_instr[14]), .idex_rd(rd_EX), .idex_mem(L), .id_mux(mux_ctrl_ID), .ifid_write_en(IFID_preg_wen));
 
 //assign fields
 assign wb_EX    = IDEX_preg_wb;
@@ -337,7 +363,6 @@ assign mux5_o_EX = mux5_ctrl_EX ? pc_EX	 : mux2_o_EX;
 assign mux6_o_EX = mux6_ctrl_EX ? csr_reg_EX : aluout_EX;
 assign mux7_o_EX = mux7_ctrl_EX ? imm_EX : aluout_EX;
 
-
 //instantiate the forwarding unit.
 forwarding_unit FWD_UNIT(.rs1(rs1_EX), .rs2(rs2_EX), .exmem_rd(rd_MEM), .memwb_rd(rd_WB), .exmem_wb(wb_MEM[3]), .memwb_wb(rf_wen_WB), .mux1_ctrl(mux2_ctrl_EX), .mux2_ctrl(mux4_ctrl_EX));
 //instantiate the ALU
@@ -347,15 +372,52 @@ ALU ALU (.src1(mux1_o_EX), .src2(mux3_o_EX), .func1(alu_func1), .func2(alu_func2
 assign muxpc_ctrl  = ~(J | (B & aluout_EX[0]));
 assign addr_cal_o  = mux5_o_EX + imm_EX;
 
+//see if the load/store address is misaligned and thus requires two seperate load/store operations
+//only applies to the main memory, which is SRAM
+assign alu_addr_misaligned = aluout_EX[11] ? 1'b0 
+                           : (ls_length_MEM == 2'd2 && aluout_EX[1:0] != 2'd0) ? 1'b1
+                           : (ls_length_MEM == 2'd1 && aluout_EX[1:0] == 2'd3) ? 1'b1
+                           : 1'b0;
+                           
+assign load_store_misaligned = (L | !wen_MEM) & !IDEX_preg_misaligned & alu_addr_misaligned; //the instruction must be a load or a store, and the address must be misaligned.
+
 //inputs to memory
 assign wen_MEM     = mem_EX[0];
-assign ls_length_MEM   = mem_EX[2:1];
-assign data_addr_o = aluout_EX;
-assign data_o	   = mux4_o_EX;
-assign wen0_o      = wen_MEM;
-assign wmask0_o    = ls_length_MEM == 2'b0 ? 4'b0001
-                   : ls_length_MEM == 2'b1 ? 4'b0011
-                   : 4'b1111;
+assign ls_length_MEM  = mem_EX[2:1];
+assign data_addr_o = IDEX_preg_misaligned ? {aluout_EX[31:2],2'b0} + 32'd4 : aluout_EX;
+assign wen0_o      = csr_ex_flush ? 1'b1 : wen_MEM;
+                   
+always @(*)
+begin
+	if(!IDEX_preg_misaligned)
+	begin
+		if(ls_length_MEM == 2'd0)
+			wmask0_o = 4'b1 << aluout_EX[1:0];
+	
+		else if(ls_length_MEM == 2'd1)
+			wmask0_o = 4'b11 << aluout_EX[1:0];
+		
+		else
+			wmask0_o = 4'b1111 << aluout_EX[1:0];
+			
+		data_o = mux4_o_EX << 8*aluout_EX[1:0];
+	end
+	
+	else
+	begin
+		if(ls_length_MEM == 2'd1)
+		begin
+			wmask0_o = 4'b1;
+			data_o = mux4_o_EX >> 8;
+		end
+		
+		else
+		begin
+			wmask0_o = 4'b1111 >> (3'd4 - {1'b0,aluout_EX[1:0]});
+			data_o = mux4_o_EX >> 8*(3'd4 - {1'b0,aluout_EX[1:0]});
+		end
+	end
+end
 
 always @(posedge clk_i or negedge reset_i) //clock the outputs to the pipeline register
 begin
@@ -364,6 +426,8 @@ begin
 		{EXMEM_preg_wb, EXMEM_preg_mem, EXMEM_preg_csr_addr, EXMEM_preg_pc, EXMEM_preg_aluout, EXMEM_preg_data2, EXMEM_preg_rd, EXMEM_preg_imm} <= {7'h0c,3'b1,145'b0};
 		EXMEM_preg_dummy <= 1'b0;
 		EXMEM_preg_mret <= 1'b0;
+		EXMEM_preg_misaligned <= 1'b0;
+		EXMEM_preg_addr_bits <= 2'b0;
 	end
 		
 	else if(csr_ex_flush)
@@ -371,6 +435,8 @@ begin
 		{EXMEM_preg_wb, EXMEM_preg_mem, EXMEM_preg_csr_addr, EXMEM_preg_pc, EXMEM_preg_aluout, EXMEM_preg_data2, EXMEM_preg_rd, EXMEM_preg_imm} <= {7'h0c,3'b1,145'b0};
 		EXMEM_preg_dummy <= 1'b1;
 		EXMEM_preg_mret <= 1'b0;
+		EXMEM_preg_misaligned <= 1'b0;
+		EXMEM_preg_addr_bits <= 2'b0;
 	end
 
 	else
@@ -381,11 +447,14 @@ begin
 		EXMEM_preg_data2  <= mux4_o_EX;
 		EXMEM_preg_aluout <= mux6_o_EX;
 		EXMEM_preg_mem    <= mem_EX;
-		EXMEM_preg_wb     <= wb_EX;
+		EXMEM_preg_wb[6:4] <= wb_EX[6:4];
+		EXMEM_preg_wb[3]  <= load_store_misaligned ? 1'b1 : wb_EX[3];
+		EXMEM_preg_wb[2:0] <= wb_EX[2:0];
 		EXMEM_preg_csr_addr <= csr_addr_EX;
 		EXMEM_preg_dummy <= IDEX_preg_dummy;
 		EXMEM_preg_mret <= IDEX_preg_mret;
-		
+		EXMEM_preg_misaligned <= IDEX_preg_misaligned;
+		EXMEM_preg_addr_bits <= aluout_EX[1:0];
 	end
 end 
 
@@ -401,6 +470,65 @@ assign rd_MEM 	  = EXMEM_preg_rd;
 assign pc_MEM     = EXMEM_preg_pc;
 assign imm_MEM 	  = EXMEM_preg_imm;
 assign csr_addr_MEM = EXMEM_preg_csr_addr;
+assign addr_bits  = EXMEM_preg_addr_bits;
+//assign nets
+always @(*)
+begin
+	if(EXMEM_preg_misaligned)
+	begin
+		if(mem_MEM[2:1] == 2'd2) //32-bit load
+		begin
+			if(addr_bits == 2'd3)
+				memout = {data_i[23:0],memout_WB[7:0]}; 
+			else if(addr_bits == 2'd2)
+				memout = {data_i[15:0],memout_WB[15:0]};
+			else // 2'd1
+				memout = {data_i[7:0],memout_WB[23:0]};
+		end
+		
+		else //16-bit load
+			memout = {16'b0,data_i[7:0],memout_WB[7:0]};
+	end
+	
+	else
+	begin
+		if(mem_MEM[2:1] == 2'd2) //32-bit load
+		begin
+			if(addr_bits == 2'd3)
+				memout = {24'b0,data_i[31:24]};
+			else if(addr_bits == 2'd2)
+				memout = {16'b0,data_i[31:16]};
+			else if(addr_bits == 2'd1) 
+				memout = {8'b0,data_i[31:8]};
+			else
+				memout = data_i;			
+		end
+		
+		else if(mem_MEM[2:1] == 2'd1) //16-bit load
+		begin
+			if(addr_bits == 2'd3)
+				memout = {24'b0,data_i[31:24]};
+			else if(addr_bits == 2'd2)
+				memout = {16'b0,data_i[31:16]};
+			else if(addr_bits == 2'd1) 
+				memout = {16'b0,data_i[23:8]};
+			else
+				memout = {16'b0,data_i[15:0]};	
+		end
+		
+		else //8-bit load
+		begin
+			if(addr_bits == 2'd3)
+				memout = {24'b0,data_i[31:24]};
+			else if(addr_bits == 2'd2)
+				memout = {24'b0,data_i[23:16]};
+			else if(addr_bits == 2'd1) 
+				memout = {24'b0,data_i[15:8]};
+			else
+				memout = {24'b0,data_i[7:0]};
+		end
+	end
+end
 
 always @(posedge clk_i or negedge reset_i)
 begin
@@ -408,12 +536,14 @@ begin
 	begin
 		{MEMWB_preg_wb, MEMWB_preg_csr_addr, MEMWB_preg_rd, MEMWB_preg_memout, MEMWB_preg_aluout, MEMWB_preg_imm} <= {7'h0c, 113'b0}; //reset pipeline register
 		MEMWB_preg_mret <= 1'b0;
+		MEMWB_preg_misaligned <= 1'b0;
 	end
 		
 	else if(csr_mem_flush)
 	begin
 		{MEMWB_preg_wb, MEMWB_preg_csr_addr, MEMWB_preg_rd, MEMWB_preg_memout, MEMWB_preg_aluout, MEMWB_preg_imm} <= {7'h0c, 113'b0};
 		MEMWB_preg_mret <= 1'b0;
+		MEMWB_preg_misaligned <= 1'b0;
 	end
 	
 	else
@@ -423,14 +553,14 @@ begin
 		MEMWB_preg_csr_addr <= csr_addr_MEM;
 		MEMWB_preg_imm <= imm_MEM;
 		MEMWB_preg_aluout <= aluout_MEM;
-		MEMWB_preg_memout <= data_i;
+		MEMWB_preg_memout <= memout;
 		MEMWB_preg_imm <= imm_MEM;
 		MEMWB_preg_mret <= EXMEM_preg_mret;
+		MEMWB_preg_misaligned <= EXMEM_preg_misaligned;
 	end
 end
-
-
 //END MEM STAGE-----------------------------------------------------------------------------
+
 //WB STAGE---------------------------------------------------------------------------------
 //assign fields
 assign wb_WB 	   = MEMWB_preg_wb;

@@ -20,6 +20,7 @@ module csr_unit(input clk_i, reset_i,
                 input csr_wen_i, meip_i, mtip_i, muxpc_ctrl_i,
                 input mem_wen_i, ex_dummy_i, mem_dummy_i,
                 input mret_id_i, mret_wb_i,
+                input misaligned_ex,
 
                 output reg [31:0] csr_reg_o,
                 output [31:0] irq_addr_o, mepc_o,
@@ -35,7 +36,7 @@ wire csr_if_flush, csr_id_flush, csr_ex_flush, csr_mem_flush;
 assign pending_irq = (`mie_meie & `mip_meip) | (`mie_mtie & `mip_mtip);
 assign csr_if_flush = (`mstatus_mie & pending_irq) | (STATE == `S1) | (mret_id_i & muxpc_ctrl_i);
 assign csr_id_flush = csr_ex_flush | (`mstatus_mie & pending_irq);
-assign csr_ex_flush = csr_mem_flush | (`mstatus_mie & pending_irq & !ex_dummy_i);
+assign csr_ex_flush = csr_mem_flush | (`mstatus_mie & pending_irq & !ex_dummy_i & !misaligned_ex);
 assign csr_mem_flush = `mstatus_mie & pending_irq & mem_wen_i & !mem_dummy_i;
 
 //outputs

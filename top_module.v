@@ -1,12 +1,11 @@
 `include "/home/ytozlu/projects/BASAK/projectDir/yavuz_digital/riscv/top_module/core.v"
 `include "/home/ytozlu/projects/BASAK/projectDir/yavuz_digital/riscv/top_module/mtime_registers.v"
-`include "/home/ytozlu/projects/BASAK/projectDir/yavuz_digital/riscv/top_module/uart.v"
+//`include "/home/ytozlu/projects/BASAK/projectDir/yavuz_digital/riscv/top_module/uart.v"
 `timescale 1ns/1ps
 
 module top_module(input clk_i,
                   input reset_i,
-                  input rx_i,
-                  output tx_o,
+                  input meip_i,
                   output irq_ack_o);
 				  
 wire [3:0] wmask0;
@@ -20,17 +19,21 @@ reg [31:0] data_addr_o_reg, core_data_o_reg;
 reg [3:0] wmask0_reg;
 reg wen0_reg;
 
+/*
 wire uart_csb, uart_rx_irq;
-wire [7:0] uart_data_o;
+wire [7:0] uart_data_o;*/
 
 assign sram_csb = data_addr_o[11] | !reset_i;
-assign mtime_csb = !data_addr_o[11] | data_addr_o[4] | !reset_i;
-assign uart_csb = !data_addr_o_reg[11] | !data_addr_o_reg[4] | !reset_i;
+assign mtime_csb = !data_addr_o[11] | !reset_i;
+//assign uart_csb = !data_addr_o_reg[11] | !data_addr_o_reg[4] | !reset_i;
 
+/*
 assign core_data_i = !mtime_csb_reg ? mtime_data_o 
                    : !uart_csb ? uart_data_o
-                   : mem_data_o;
-
+                   : mem_data_o;*/
+                   
+assign core_data_i = !mtime_csb_reg ? mtime_data_o : mem_data_o;                  
+               
 always @(posedge clk_i or negedge reset_i)
 begin
 	if(!reset_i)
@@ -53,17 +56,17 @@ begin
 	end
 end
 
-core core0(.clk_i(clk_i), 
-           .reset_i(reset_i), 
-           .meip_i(uart_rx_irq), 
-           .mtip_i(mtip_o), 
-           .instr_i(mem_instr_o), 
-           .data_i(core_data_i), 
-           .data_o(core_data_o), 
-           .wmask0_o(wmask0), 
-           .wen0_o(wen0), 
-           .instr_addr_o(instr_addr_o), 
-           .data_addr_o(data_addr_o), 
+core core0(.clk_i(clk_i),
+           .reset_i(reset_i),
+           .meip_i(meip_i),
+           .mtip_i(mtip_o),
+           .instr_i(mem_instr_o),
+           .data_i(core_data_i),
+           .data_o(core_data_o),
+           .wmask0_o(wmask0),
+           .wen0_o(wen0),
+           .instr_addr_o(instr_addr_o),
+           .data_addr_o(data_addr_o),
            .irq_ack_o(irq_ack_o));
 
 memory_2rw memory(.clk0(clk_i), .csb0(sram_csb), .web0(wen0), .wmask0(wmask0), .addr0(data_addr_o[10:2]), .din0(core_data_o), .dout0(mem_data_o), //port 0 is for data memory
@@ -78,13 +81,13 @@ mtime_registers mtime0(.reset_i(reset_i),
                        .wmask_i(wmask0_reg), 
                        .mtip_o(mtip_o), 
                        .data_o(mtime_data_o));  
-                       
-uart uart0 (.clk_i(clk_i), .reset_i(reset_i), .rx_i(rx_i),
+                  
+/*uart uart0 (.clk_i(clk_i), .reset_i(reset_i), .rx_i(rx_i),
             .csb_i(uart_csb), .wen_i(wen0_reg),
             .data_i(core_data_o_reg[7:0]),
             .addr_i(data_addr_o_reg[1:0]),
             .tx_o(tx_o), .receive_irq(uart_rx_irq),
-            .data_o(uart_data_o));                                   
+            .data_o(uart_data_o));            */              
 
 endmodule
 
