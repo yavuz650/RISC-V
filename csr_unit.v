@@ -17,7 +17,7 @@ module csr_unit(input clk_i, reset_i,
                 input [11:0] csr_r_addr_i,
                 input [11:0] csr_w_addr_i,
                 input [31:0] csr_reg_i,
-                input csr_wen_i, meip_i, mtip_i, muxpc_ctrl_i,
+                input csr_wen_i, meip_i, mtip_i, take_branch_i,
                 input mem_wen_i, ex_dummy_i, mem_dummy_i,
                 input mret_id_i, mret_wb_i,
                 input misaligned_ex,
@@ -34,15 +34,15 @@ wire pending_irq;
 wire csr_if_flush, csr_id_flush, csr_ex_flush, csr_mem_flush;
 
 assign pending_irq = (`mie_meie & `mip_meip) | (`mie_mtie & `mip_mtip);
-assign csr_if_flush = (`mstatus_mie & pending_irq) | (STATE == `S1) | (mret_id_i & muxpc_ctrl_i);
+assign csr_if_flush = (`mstatus_mie & pending_irq) | (STATE == `S1) | (mret_id_i & ~take_branch_i);
 assign csr_id_flush = csr_ex_flush | (`mstatus_mie & pending_irq);
 assign csr_ex_flush = csr_mem_flush | (`mstatus_mie & pending_irq & !ex_dummy_i & !misaligned_ex);
 assign csr_mem_flush = `mstatus_mie & pending_irq & mem_wen_i & !mem_dummy_i;
 
 //outputs
 assign irq_addr_o = (mtvec >> 2) + (mcause << 2);
-assign mux1_ctrl_o = mret_id_i & muxpc_ctrl_i;
-assign mux2_ctrl_o = !((STATE == `S1) | (mret_id_i & muxpc_ctrl_i));
+assign mux1_ctrl_o = mret_id_i & ~take_branch_i;
+assign mux2_ctrl_o = !((STATE == `S1) | (mret_id_i & ~take_branch_i));
 assign csr_if_flush_o = csr_if_flush;
 assign csr_id_flush_o = csr_id_flush;
 assign csr_ex_flush_o = csr_ex_flush;
