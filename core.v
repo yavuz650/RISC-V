@@ -12,13 +12,13 @@ module core(input reset_i, //active-low reset. all write_enable signals are also
             input [31:0] instr_i,
             input [31:0] data_i,
 	    	
-            output     [3:0]  data_wmask_o,
-            output            data_wen_o,
-            output     [31:0] data_addr_o,
-            output     [31:0] data_o,
+            output [3:0]  data_wmask_o,
+            output        data_wen_o,
+            output [31:0] data_addr_o,
+            output [31:0] data_o,
             
-            output     [31:0] instr_addr_o,
-            output            irq_ack_o); 
+            output [31:0] instr_addr_o,
+            output        irq_ack_o); 
 				  
 
 //IF signals------------------------------------------------------------
