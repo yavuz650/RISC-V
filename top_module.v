@@ -1,6 +1,5 @@
 `include "/home/ytozlu/projects/BASAK/projectDir/yavuz_digital/riscv/top_module/core.v"
 `include "/home/ytozlu/projects/BASAK/projectDir/yavuz_digital/riscv/top_module/mtime_registers.v"
-//`include "/home/ytozlu/projects/BASAK/projectDir/yavuz_digital/riscv/top_module/uart.v"
 `timescale 1ns/1ps
 
 module top_module(input clk_i,
