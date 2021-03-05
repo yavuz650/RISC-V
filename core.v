@@ -82,12 +82,12 @@ wire [2:0]  mem_EX;
 wire [14:0] ex_EX;
 wire [31:0] pc_EX, data1_EX, data2_EX, imm_EX;
 wire [4:0]  rs1_EX, rs2_EX, rd_EX;
-wire [1:0]  mux1_ctrl_EX, mux2_ctrl_EX, mux3_ctrl_EX, mux4_ctrl_EX;
+wire [1:0]  mux1_ctrl_EX, mux2_ctrl_EX, mux3_ctrl_EX, mux4_ctrl_EX, mux8_ctrl_EX;
 wire        mux5_ctrl_EX, mux6_ctrl_EX, mux7_ctrl_EX;
-wire [31:0] mux1_o_EX, mux2_o_EX, mux3_o_EX, mux4_o_EX, mux5_o_EX, mux6_o_EX, mux7_o_EX;
+wire [31:0] mux1_o_EX, mux2_o_EX, mux3_o_EX, mux4_o_EX, mux5_o_EX, mux6_o_EX, mux7_o_EX, mux8_o_EX;
 wire [3:0]  alu_func1;
 wire [1:0]  alu_func2;
-wire [31:0] aluout_EX, csr_reg_EX;
+wire [31:0] aluout_EX, csr_reg_out;
 wire        J, B, L; //jump, branch, load
 wire [11:0] csr_addr_EX;
 wire        misaligned_access;
@@ -168,7 +168,7 @@ csr_unit CSR_UNIT(.clk_i(clk_i), .reset_i(reset_i),
                   .mret_id_i(mret_ID), .mret_wb_i(mret_WB),
                   .misaligned_ex(IDEX_preg_misaligned),
 
-                  .csr_reg_o(csr_reg_EX), .mepc_o(mepc),
+                  .csr_reg_o(csr_reg_out), .mepc_o(mepc),
                   .irq_addr_o(irq_addr),
                   .mux1_ctrl_o(mux1_ctrl_IF), .mux2_ctrl_o(mux4_ctrl_IF), .ack_o(irq_ack_o),
                   .mem_wen_i(mem_MEM[0]), .ex_dummy_i(IDEX_preg_dummy), .mem_dummy_i(EXMEM_preg_dummy),
@@ -347,7 +347,7 @@ assign J            = ex_EX[13]; //jump
 assign B            = ex_EX[14]; //branch
 assign L            = (!wb_EX[3] && wb_EX[6:5] == 2'b1) ? 1'b1 : 1'b0; //load
 //muxes
-assign mux1_o_EX = mux1_ctrl_EX == 2'b10 ? csr_reg_EX
+assign mux1_o_EX = mux1_ctrl_EX == 2'b10 ? mux8_o_EX
                  : mux1_ctrl_EX == 2'b01 ? pc_EX 
                  : mux2_o_EX;
                  
@@ -355,7 +355,7 @@ assign mux2_o_EX = mux2_ctrl_EX == 2'b10 ? aluout_MEM
                  : mux2_ctrl_EX == 2'b01 ? mux_o_WB
                  : data1_EX;
 				 
-assign mux3_o_EX = mux3_ctrl_EX == 2'b10 ? csr_reg_EX
+assign mux3_o_EX = mux3_ctrl_EX == 2'b10 ? mux8_o_EX
                  : mux3_ctrl_EX == 2'b01 ? imm_EX 
                  : mux4_o_EX;
                  
@@ -364,11 +364,16 @@ assign mux4_o_EX = mux4_ctrl_EX == 2'b10 ? data2_EX
                  : aluout_MEM;
 				 
 assign mux5_o_EX = mux5_ctrl_EX ? pc_EX	 : mux2_o_EX;
-assign mux6_o_EX = mux6_ctrl_EX ? csr_reg_EX : aluout_EX;
+assign mux6_o_EX = mux6_ctrl_EX ? mux8_o_EX : aluout_EX;
 assign mux7_o_EX = mux7_ctrl_EX ? imm_EX : aluout_EX;
 
+assign mux8_o_EX = mux8_ctrl_EX == 2'd0 ? imm_WB 
+                 : mux8_ctrl_EX == 2'd1 ? imm_MEM
+                 : csr_reg_out;
+
 //instantiate the forwarding unit.
-forwarding_unit FWD_UNIT(.rs1(rs1_EX), .rs2(rs2_EX), .exmem_rd(rd_MEM), .memwb_rd(rd_WB), .exmem_wb(wb_MEM[3]), .memwb_wb(rf_wen_WB), .mux1_ctrl(mux2_ctrl_EX), .mux2_ctrl(mux4_ctrl_EX));
+forwarding_unit FWD_UNIT(.rs1(rs1_EX), .rs2(rs2_EX), .exmem_rd(rd_MEM), .memwb_rd(rd_WB), .exmem_wb(wb_MEM[3]), .memwb_wb(rf_wen_WB), .mux1_ctrl(mux2_ctrl_EX), .mux2_ctrl(mux4_ctrl_EX),
+                         .csr_addr_EX(csr_addr_EX), .csr_addr_MEM(csr_addr_MEM), .csr_addr_WB(csr_addr_WB), .csr_wen_MEM(wb_MEM[2]), .csr_wen_WB(csr_wen_WB), .mux3_ctrl(mux8_ctrl_EX));
 //instantiate the ALU
 ALU ALU (.src1(mux1_o_EX), .src2(mux3_o_EX), .func1(alu_func1), .func2(alu_func2), .alu_out(aluout_EX));
 
