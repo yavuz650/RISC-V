@@ -1,10 +1,10 @@
-`include "ALU.v"
-`include "control_unit.v"
-`include "forwarding_unit.v"
-`include "hazard_detection_unit.v"
-`include "imm_decoder.v"
-`include "csr_unit.v"
-`include "load_store_unit.v"
+`include "../core/ALU.v"
+`include "../core/control_unit.v"
+`include "../core/forwarding_unit.v"
+`include "../core/hazard_detection_unit.v"
+`include "../core/imm_decoder.v"
+`include "../core/csr_unit.v"
+`include "../core/load_store_unit.v"
 `timescale 1ns/1ps
 
 module core(input reset_i, //active-low reset. all write_enable signals are also active-low.
@@ -40,7 +40,6 @@ reg        IFID_preg_dummy; //indicates if the instruction in the ID stage is du
 //ID signals
 wire [4:0]  rs1_ID, rs2_ID, rd_ID; //register addresses
 wire [31:0] data1_ID, data2_ID;
-wire [14:0] ctrl_unit_i; //control unit input
 wire [29:0] imm_dec_i; //immediate decoder input
 wire [11:0] csr_addr_ID;
 wire        mret_ID;
@@ -55,6 +54,7 @@ wire [1:0] ctrl_unit_mem_len;
 wire       ctrl_unit_mem_wen, ctrl_unit_wb_rf_wen, ctrl_unit_wb_csr_wen;
 wire [1:0] ctrl_unit_wb_mux;
 wire       ctrl_unit_wb_sign;
+wire       ctrl_unit_illegal_instr, ctrl_unit_ecall, ctrl_unit_ebreak;
 
 wire [31:0] imm_dec_o, pc_ID; //immediate decoder output, pc value
 wire        mux_ctrl_ID; //control signal for all three muxes
@@ -93,6 +93,7 @@ wire [11:0] csr_addr_EX;
 wire        misaligned_access;
 wire        mem_wen_EX;
 wire [1:0]  mem_length_EX;
+wire        instr_addr_misaligned;
 //pipeline register
 reg [31:0] EXMEM_preg_imm;
 reg [4:0]  EXMEM_preg_rd;
@@ -147,9 +148,8 @@ wire [31:0] csr_pcin_mux1_o, csr_pcin_mux2_o;
 reg [31:0] csr_pc_input;
 
 //----------------------------------------------------------------------
-assign csr_pcin_mux1_o = (IDEX_preg_dummy || IDEX_preg_misaligned) ? pc_ID : pc_EX;
-assign csr_pcin_mux2_o = !EXMEM_preg_dummy & mem_MEM[0] ? pc_MEM : csr_pcin_mux1_o;
-assign mret_ID = IFID_preg_instr[31:2] == 30'hc08_001c ? 1'b1 : 1'b0;
+assign csr_pcin_mux1_o = csr_ex_flush ? pc_EX : pc_ID;
+assign csr_pcin_mux2_o = csr_mem_flush ? pc_MEM : csr_pcin_mux1_o;
 
 always @(posedge clk_i or negedge reset_i)
 begin
@@ -172,7 +172,8 @@ csr_unit CSR_UNIT(.clk_i(clk_i), .reset_i(reset_i),
                   .irq_addr_o(irq_addr),
                   .mux1_ctrl_o(mux1_ctrl_IF), .mux2_ctrl_o(mux4_ctrl_IF), .ack_o(irq_ack_o),
                   .mem_wen_i(mem_MEM[0]), .ex_dummy_i(IDEX_preg_dummy), .mem_dummy_i(EXMEM_preg_dummy),
-                  .csr_if_flush_o(csr_if_flush), .csr_id_flush_o(csr_id_flush), .csr_ex_flush_o(csr_ex_flush), .csr_mem_flush_o(csr_mem_flush));
+                  .csr_if_flush_o(csr_if_flush), .csr_id_flush_o(csr_id_flush), .csr_ex_flush_o(csr_ex_flush), .csr_mem_flush_o(csr_mem_flush),
+                  .illegal_instr_i(ctrl_unit_illegal_instr), .ecall_i(ctrl_unit_ecall), .ebreak_i(ctrl_unit_ebreak), .instr_addr_misaligned_i(instr_addr_misaligned));
 
 //IF STAGE---------------------------------------------------------------------------------
 assign mux2_o_IF = (hazard_stall_IF | misaligned_access) ? pc_o : pc_o + 32'd4;
@@ -220,13 +221,12 @@ assign rs2_ID       = IFID_preg_instr[24:20];
 assign rd_ID        = IFID_preg_instr[11:7];
 assign pc_ID        = IFID_preg_pc;
 assign imm_dec_i    = IFID_preg_instr[31:2];
-assign ctrl_unit_i  = {IFID_preg_instr[31:25], IFID_preg_instr[14:12], IFID_preg_instr[6:2]};
 assign csr_addr_ID  = IFID_preg_instr[31:20];
 assign mux1_o_ID    = mux_ctrl_ID ? 7'h0c : {ctrl_unit_wb_mux, ctrl_unit_wb_sign, ctrl_unit_wb_rf_wen, ctrl_unit_wb_csr_wen, ctrl_unit_mem_len};
 assign mux2_o_ID    = mux_ctrl_ID ? 3'b1 : {ctrl_unit_mem_len, ctrl_unit_mem_wen};
 assign mux3_o_ID    = mux_ctrl_ID ? 15'b0 : {ctrl_unit_B, ctrl_unit_J, ctrl_unit_ex_mux7, ctrl_unit_ex_mux6, ctrl_unit_ex_mux5, ctrl_unit_ex_mux3, ctrl_unit_ex_mux1, ctrl_unit_alu_func2, ctrl_unit_alu_func1};
 
-control_unit    CTRL_UNIT   (.control_i(ctrl_unit_i),
+control_unit    CTRL_UNIT   (.instr_i(IFID_preg_instr),
                              .ALU_func1(ctrl_unit_alu_func1),
                              .ALU_func2(ctrl_unit_alu_func2),
                              .EX_mux5(ctrl_unit_ex_mux5), .EX_mux6(ctrl_unit_ex_mux6), .EX_mux7(ctrl_unit_ex_mux7),
@@ -235,7 +235,9 @@ control_unit    CTRL_UNIT   (.control_i(ctrl_unit_i),
                              .MEM_len(ctrl_unit_mem_len),
                              .MEM_wen(ctrl_unit_mem_wen), .WB_rf_wen(ctrl_unit_wb_rf_wen), .WB_csr_wen(ctrl_unit_wb_csr_wen),
                              .WB_mux(ctrl_unit_wb_mux),
-                             .WB_sign(ctrl_unit_wb_sign));
+                             .WB_sign(ctrl_unit_wb_sign),
+                             .illegal_instr(ctrl_unit_illegal_instr), .ecall_o(ctrl_unit_ecall), .ebreak_o(ctrl_unit_ebreak),
+                             .mret_o(mret_ID));
                              
 imm_decoder     IMM_DEC   	(.instr_in(imm_dec_i), .imm_out(imm_dec_o));
 
@@ -382,6 +384,7 @@ assign take_branch = J | (B & aluout_EX[0]);
 assign branch_addr_calc = mux5_o_EX + imm_EX;
 assign branch_target_addr[31:1] = branch_addr_calc[31:1];
 assign branch_target_addr[0] = (!mux5_ctrl_EX & J) ? 1'b0 : branch_addr_calc[0]; //clear the least-significant bit if the instruction is JALR.
+assign instr_addr_misaligned = take_branch & (branch_target_addr[1:0] != 2'd0);
 
 always @(posedge clk_i or negedge reset_i) //clock the outputs to the pipeline register
 begin

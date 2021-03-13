@@ -28,7 +28,7 @@ read_hdl -v2001 {top_module.v}
 elaborate top_module
 
 # Defining Time Constraints - ns
-create_clock -period 100 -name clkin1 -domain domain_1 clk_i
+create_clock -period 10 -name clkin1 -domain domain_1 clk_i
 set_clock_latency -max 1 clkin1
 # CLOCK UNCERTAINTY (JITTER) 
 set_clock_uncertainty -setup 1 clkin1
@@ -37,7 +37,8 @@ set_clock_uncertainty -hold 1 clkin1
 set_input_delay -clock clkin1 -clock_rise 1 [all_inputs]
 set_output_delay -clock clkin1 -clock_rise 1 [all_outputs]
 
-set_driving_cell reset_i wen_i instr_i* addr_i* meip_i -cell BUFFPD12BWP14T
+set_driving_cell reset_i meip_i -cell BUFFPD12BWP14T
+set_load 1 irq_ack_o
 
 # Synthesizing
 #set_db operating_conditions BCCOM
@@ -57,4 +58,17 @@ report area > report_area.txt
 # Writing Design Files
 write_hdl top_module -language v2001 > syn_top_module.v
 write_sdf -edges check_edge -design top_module > top_module.sdf
+
+#add timescale directive
+file rename syn_top_module.v syn_orig.v
+set fin [open syn_orig.v r]
+set fout [open syn_top_module.v w]
+
+puts $fout "`timescale 1ns/1ps"
+fcopy $fin $fout
+
+close $fin
+close $fout
+file delete syn_orig.v
+
 

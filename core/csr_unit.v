@@ -3,7 +3,6 @@
 `define INIT 2'd0
 `define STAND_BY 2'd1
 `define S1 2'd2
-`define S2 2'd3
 //bits in the CSR registers
 `define mstatus_mie mstatus[3]
 `define mstatus_mpie mstatus[7]
@@ -21,6 +20,7 @@ module csr_unit(input clk_i, reset_i,
                 input mem_wen_i, ex_dummy_i, mem_dummy_i,
                 input mret_id_i, mret_wb_i,
                 input misaligned_ex,
+                input illegal_instr_i, instr_addr_misaligned_i, ecall_i, ebreak_i,
 
                 output reg [31:0] csr_reg_o,
                 output [31:0] irq_addr_o, mepc_o,
@@ -30,17 +30,21 @@ module csr_unit(input clk_i, reset_i,
                 
 reg [1:0] STATE;
 reg [31:0] mstatus, mie, mip, mcause, mtvec, mepc, mscratch;
-wire pending_irq;
+wire pending_irq, pending_exception;
 wire csr_if_flush, csr_id_flush, csr_ex_flush, csr_mem_flush;
 
+reg [31:0] mcause_buf;
+
+
+assign pending_exception = (illegal_instr_i | instr_addr_misaligned_i | ecall_i | ebreak_i) & ~take_branch_i;
 assign pending_irq = (`mie_meie & `mip_meip) | (`mie_mtie & `mip_mtip);
-assign csr_if_flush = (`mstatus_mie & pending_irq) | (STATE == `S1) | (mret_id_i & ~take_branch_i);
-assign csr_id_flush = csr_ex_flush | (`mstatus_mie & pending_irq);
-assign csr_ex_flush = csr_mem_flush | (`mstatus_mie & pending_irq & !ex_dummy_i & !misaligned_ex);
+assign csr_if_flush = (`mstatus_mie & pending_irq) | (STATE == `S1) | (mret_id_i & ~take_branch_i) | pending_exception;
+assign csr_id_flush = csr_ex_flush | (`mstatus_mie & pending_irq) | pending_exception;
+assign csr_ex_flush = csr_mem_flush | (`mstatus_mie & pending_irq & !ex_dummy_i & !misaligned_ex) | instr_addr_misaligned_i;
 assign csr_mem_flush = `mstatus_mie & pending_irq & mem_wen_i & !mem_dummy_i;
 
 //outputs
-assign irq_addr_o = (mtvec >> 2) + (mcause << 2);
+assign irq_addr_o = mcause_buf[31] ? (mtvec >> 2) + (mcause_buf << 2) : mtvec >> 2;
 assign mux1_ctrl_o = mret_id_i & ~take_branch_i;
 assign mux2_ctrl_o = !((STATE == `S1) | (mret_id_i & ~take_branch_i));
 assign csr_if_flush_o = csr_if_flush;
@@ -57,6 +61,7 @@ begin
 	begin
 		STATE <= `INIT;
 		ack_o <= 1'b0;
+		mcause_buf <= 32'd0;
 	end
 	
 	else
@@ -73,22 +78,47 @@ begin
 				begin
 					STATE <= `S1;
 					ack_o <= 1'b1;
+					mcause_buf[31] <= 1'b1;
+					mcause_buf[30:0] <= 31'd11;
 				end
 				
 				else if(`mstatus_mie & `mie_mtie & `mip_mtip)
+				begin
 					STATE <= `S1;
+					mcause_buf[31] <= 1'b1;
+					mcause_buf[30:0] <= 31'd7;					
+				end
+				else if(instr_addr_misaligned_i & !take_branch_i)
+				begin
+					STATE <= `S1;
+					mcause_buf[31] <= 1'b0;
+					mcause_buf[30:0] <= 31'd0;						
+				end
+				else if(illegal_instr_i & !take_branch_i)
+				begin
+					STATE <= `S1;
+					mcause_buf[31] <= 1'b0;
+					mcause_buf[30:0] <= 31'd2;
+				end
+				else if(ecall_i & !take_branch_i)
+				begin
+					STATE <= `S1;
+					mcause_buf[31] <= 1'b0;
+					mcause_buf[30:0] <= 31'd11;
+				end
+				else if(ebreak_i & !take_branch_i)
+				begin
+					STATE <= `S1;
+					mcause_buf[31] <= 1'b0;
+					mcause_buf[30:0] <= 31'd3;
+				end
 			end
 			
 			`S1:
 			begin
-				STATE <= `S2;
-				ack_o <= 1'b0;
-			end
-			
-			`S2:
-			begin
 				STATE <= `STAND_BY;
-			end
+				ack_o <= 1'b0;
+			end			
 		endcase
 	end		
 end
@@ -113,13 +143,16 @@ begin
 			csr_reg_o <= mscratch;
 				
 		else if(csr_r_addr_i[11:0] == 12'h341) //0x341 - mepc
-			csr_reg_o <= mepc;
+			csr_reg_o <= {mepc[31:2],2'b0};
 			
 		else if(csr_r_addr_i[11:0] == 12'h342) //0x342 - mcause
-				csr_reg_o <= mcause;
+			csr_reg_o <= mcause;
 			
 		else if(csr_r_addr_i[11:0] == 12'h344) //0x344 - mip
 			csr_reg_o <= mip;
+			
+		else
+			csr_reg_o <= 32'd0;
 	end
 end
 
@@ -195,13 +228,7 @@ begin
 					mepc <= pc_i;
 					`mstatus_mpie <= `mstatus_mie;
 					`mstatus_mie <= 1'b0;
-					mcause[31] <= 1'b1;
-					
-					if(`mie_meie & `mip_meip) //external interrupt
-						mcause[30:0] <= 31'd11;
-										
-					else if(`mie_mtie & `mip_mtip)//timer interrupt
-						mcause[30:0] <= 31'd7;
+					mcause <= mcause_buf;
 				end
 			endcase
 		end

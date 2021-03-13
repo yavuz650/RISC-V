@@ -8,8 +8,8 @@ module forwarding_unit(input [4:0] rs1,
 
                        output reg [1:0] mux1_ctrl,
                        output reg [1:0] mux2_ctrl,
-                       
-			           //inputs and outputs for csr forwarding 
+
+                       //inputs and outputs for csr forwarding 
                        input [11:0] csr_addr_EX, csr_addr_MEM, csr_addr_WB,
                        input        csr_wen_MEM, csr_wen_WB,
 
