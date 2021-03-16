@@ -1,10 +1,10 @@
-`include "../core/ALU.v"
-`include "../core/control_unit.v"
-`include "../core/forwarding_unit.v"
-`include "../core/hazard_detection_unit.v"
-`include "../core/imm_decoder.v"
-`include "../core/csr_unit.v"
-`include "../core/load_store_unit.v"
+`include "../../core/ALU.v"
+`include "../../core/control_unit.v"
+`include "../../core/forwarding_unit.v"
+`include "../../core/hazard_detection_unit.v"
+`include "../../core/imm_decoder.v"
+`include "../../core/csr_unit.v"
+`include "../../core/load_store_unit.v"
 `timescale 1ns/1ps
 
 module core(input reset_i, //active-low reset. all write_enable signals are also active-low.
@@ -16,7 +16,7 @@ module core(input reset_i, //active-low reset. all write_enable signals are also
             output        data_wen_o,
             output [31:0] data_addr_o,
             output [31:0] data_o,
-            
+
             output [31:0] instr_addr_o,
             output        irq_ack_o); 
 				  

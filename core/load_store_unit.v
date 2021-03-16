@@ -18,9 +18,7 @@ module load_store_unit(input [31:0] addr_i,
                        output reg [31:0] memout_o);
                        
 wire addr_misaligned;
-
-//EX STAGE
-                      
+//EX STAGE   
 //see if the load/store address is misaligned and thus requires two seperate load/store operations
 //only applies to the main memory, which is SRAM
 assign addr_misaligned     = addr_i[11] ? 1'b0 
@@ -31,7 +29,7 @@ assign addr_misaligned     = addr_i[11] ? 1'b0
 assign misaligned_access_o = (load_i | ~wen_i) & ~misaligned_EX_i & addr_misaligned; //the instruction must be a load or a store, and the address must be misaligned.
 
 //outputs to memory
-assign addr_o = misaligned_EX_i ? {addr_i[31:2],2'b0} + 32'd4 : addr_i;
+assign addr_o = misaligned_EX_i ? {addr_i[31:2],2'b0} + 32'd4 : {addr_i[31:2],2'b0};
                    
 always @(*)
 begin
@@ -96,9 +94,9 @@ begin
 			else if(addr_offset_i == 2'd1) 
 				memout_o = {8'b0,read_data_i[31:8]};
 			else
-				memout_o = read_data_i;			
+				memout_o = read_data_i;
 		end
-		
+	
 		else if(length_MEM_i == 2'd1) //16-bit load
 		begin
 			if(addr_offset_i == 2'd3)
@@ -108,9 +106,9 @@ begin
 			else if(addr_offset_i == 2'd1) 
 				memout_o = {16'b0,read_data_i[23:8]};
 			else
-				memout_o = {16'b0,read_data_i[15:0]};	
+				memout_o = {16'b0,read_data_i[15:0]};
 		end
-		
+	
 		else //8-bit load
 		begin
 			if(addr_offset_i == 2'd3)

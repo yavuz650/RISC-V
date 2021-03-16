@@ -24,8 +24,8 @@ set_db delete_unloaded_seqs false
 #set_db hdl_ff_keep_feedback true
 
 # Reading Verilog Codes and Elaborating
-read_hdl -v2001 {top_module.v}
-elaborate top_module
+read_hdl -v2001 {uart_top.v}
+elaborate uart_top
 
 # Defining Time Constraints - ns
 create_clock -period 10 -name clkin1 -domain domain_1 clk_i
@@ -45,9 +45,9 @@ set_load 1 irq_ack_o
 set_db syn_generic_effort high
 set_db syn_map_effort high
 set_db syn_opt_effort high
-syn_generic top_module
-syn_map top_module
-syn_opt top_module
+syn_generic uart_top
+syn_map uart_top
+syn_opt uart_top
 
 
 # Writing Report Files
@@ -56,13 +56,13 @@ report gates > report_gates.txt
 report area > report_area.txt
 
 # Writing Design Files
-write_hdl top_module -language v2001 > syn_top_module.v
-write_sdf -edges check_edge -design top_module > top_module.sdf
+write_hdl uart_top -language v2001 > syn_uart_top.v
+write_sdf -edges check_edge -design uart_top > uart_top.sdf
 
 #add timescale directive
-file rename syn_top_module.v syn_orig.v
+file rename syn_uart_top.v syn_orig.v
 set fin [open syn_orig.v r]
-set fout [open syn_top_module.v w]
+set fout [open syn_uart_top.v w]
 
 puts $fout "`timescale 1ns/1ps"
 fcopy $fin $fout
