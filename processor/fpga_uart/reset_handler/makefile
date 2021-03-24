@@ -1,0 +1,6 @@
+CC=riscv32-unknown-elf
+CCFLAGS=-march=rv32i -mabi=ilp32 -O3 -T linksc.ld -nostartfiles -o reset_handler.elf
+build:
+	$(CC)-gcc reset_handler.s $(CCFLAGS)
+	$(CC)-objcopy -O binary -j .init -j .text -j .rodata reset_handler.elf reset_handler.bin
+	../../../test/rom_generator reset_handler.bin
