@@ -1,19 +1,21 @@
 `timescale 1ns/1ps
 
-module core(input reset_i, //active-low reset. all write_enable signals are also active-low.
+module core(input hreset_i, sreset_i,  //active-low reset. all write_enable signals are also active-low.
             input clk_i, meip_i, mtip_i,
             input [31:0] instr_i,
             input [31:0] data_i,
-	    	
+
             output [3:0]  data_wmask_o,
             output        data_wen_o,
             output [31:0] data_addr_o,
             output [31:0] data_o,
 
             output [31:0] instr_addr_o,
-            output        irq_ack_o); 
-				  
-
+            output        irq_ack_o);
+            
+parameter reset_vector = 32'h0;
+	  
+wire reset_i;
 //IF signals------------------------------------------------------------
 wire [31:0] branch_target_addr; //branch target address, calculated in EX stage.
 wire [31:0] branch_addr_calc;
@@ -152,12 +154,16 @@ begin
 		csr_pc_input <= csr_pcin_mux2_o;
 end
 //instantiate CSR Unit
-csr_unit CSR_UNIT(.clk_i(clk_i), .reset_i(reset_i),
+csr_unit CSR_UNIT(.clk_i(clk_i), 
+                  .hreset_i(hreset_i),
+                  .sreset_i(sreset_i),
                   .pc_i(csr_pc_input),
                   .csr_r_addr_i(IFID_preg_instr[31:20]),
                   .csr_w_addr_i(csr_addr_WB),
                   .csr_reg_i(imm_WB),
-                  .csr_wen_i(csr_wen_WB), .meip_i(meip_i), .mtip_i(mtip_i), .take_branch_i(take_branch),
+                  .csr_wen_i(csr_wen_WB), 
+                  .meip_i(meip_i), .mtip_i(mtip_i), 
+                  .take_branch_i(take_branch),
                   .mret_id_i(mret_ID), .mret_wb_i(mret_WB),
                   .misaligned_ex(IDEX_preg_misaligned),
 
@@ -168,12 +174,13 @@ csr_unit CSR_UNIT(.clk_i(clk_i), .reset_i(reset_i),
                   .csr_if_flush_o(csr_if_flush), .csr_id_flush_o(csr_id_flush), .csr_ex_flush_o(csr_ex_flush), .csr_mem_flush_o(csr_mem_flush),
                   .illegal_instr_i(ctrl_unit_illegal_instr), .ecall_i(ctrl_unit_ecall), .ebreak_i(ctrl_unit_ebreak), .instr_addr_misaligned_i(instr_addr_misaligned));
 
+assign reset_i = hreset_i & sreset_i;
 //IF STAGE---------------------------------------------------------------------------------
 assign mux2_o_IF = (hazard_stall_IF | misaligned_access) ? pc_o : pc_o + 32'd4;
 assign mux3_o_IF = take_branch ? branch_target_addr : mux2_o_IF;
 assign mux4_o_IF = mux4_ctrl_IF ? mux3_o_IF : mux1_o_IF;
 assign mux1_o_IF = mux1_ctrl_IF ? mepc : irq_addr;
-assign pc_i = reset_i ? mux4_o_IF : 32'h0;
+assign pc_i = reset_i ? mux4_o_IF : reset_vector;
 assign instr_addr_o = pc_i;
 
 
@@ -181,8 +188,8 @@ always @(posedge clk_i or negedge reset_i)
 begin
 	if(!reset_i)
 	begin
-		//reset pc to wherever.
-		pc_o <= 32'h0;
+		//reset pc to reset vector.
+		pc_o <= reset_vector;
 		{IFID_preg_pc, IFID_preg_instr} <= 64'h13; //nop instruction addi x0,x0,0
 		IFID_preg_dummy <= 1'b0;
 	end

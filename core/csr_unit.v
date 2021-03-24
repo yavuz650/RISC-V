@@ -11,7 +11,7 @@
 `define mie_mtie mie[7]
 `define mip_mtip mip[7]
 
-module csr_unit(input clk_i, reset_i,
+module csr_unit(input clk_i, hreset_i, sreset_i,
                 input [31:0] pc_i,
                 input [11:0] csr_r_addr_i,
                 input [11:0] csr_w_addr_i,
@@ -32,9 +32,9 @@ reg [1:0] STATE;
 reg [31:0] mstatus, mie, mip, mcause, mtvec, mepc, mscratch;
 wire pending_irq, pending_exception;
 wire csr_if_flush, csr_id_flush, csr_ex_flush, csr_mem_flush;
-
+wire reset_i;
 reg [31:0] mcause_buf;
-
+assign reset_i = hreset_i & sreset_i;
 
 assign pending_exception = (illegal_instr_i | instr_addr_misaligned_i | ecall_i | ebreak_i) & ~take_branch_i;
 assign pending_irq = (`mie_meie & `mip_meip) | (`mie_mtie & `mip_mtip);
@@ -120,10 +120,10 @@ begin
 				ack_o <= 1'b0;
 			end			
 		endcase
-	end		
+	end
 end
 
-always @(posedge clk_i)
+always @(posedge clk_i or negedge reset_i)
 begin
 	if(!reset_i)
 		csr_reg_o <= 32'b0;
@@ -174,7 +174,6 @@ begin
 	begin
 		mepc <= 32'b0;
 		mie <= 32'b0;
-		mcause <= 32'b0;
 		mscratch <= 32'b0;
 		mtvec <= 32'b0;
 		//unused fields are hardwired to 0
@@ -214,10 +213,6 @@ begin
 				
 			else if(csr_w_addr_i[11:0] == 12'h341) //0x341 - mepc
 				mepc <= csr_reg_i;
-				
-			else if(csr_w_addr_i[11:0] == 12'h342) //0x342 - mcause
-				mcause <= csr_reg_i;
-
 		end
 
 		else
@@ -228,15 +223,36 @@ begin
 					mepc <= pc_i;
 					`mstatus_mpie <= `mstatus_mie;
 					`mstatus_mie <= 1'b0;
-					mcause <= mcause_buf;
 				end
 			endcase
 		end
 	end
 end
 
+always @(negedge clk_i)
+begin
+	if(!hreset_i)
+		mcause <= 32'b0;
+		
+	else if(!sreset_i)
+		mcause <= 32'b1;
+	
+	else
+	begin
+		if(!csr_wen_i)
+		begin		
+			if(csr_w_addr_i[11:0] == 12'h342) //0x342 - mcause
+				mcause <= csr_reg_i;
+		end
+
+		else
+		begin
+			case(STATE)	
+				`S1: mcause <= mcause_buf;
+			endcase
+		end
+	end
+end
 
 endmodule
-
-
 
