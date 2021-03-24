@@ -10,13 +10,15 @@ module loader(input       clk_i,
               output led1, led2, led3, led4);
 
 parameter S0 = 0, S1 = 1, S2 = 2, S3 = 3, S4 = 4;
+parameter SYS_CLK_FREQ = 100000000;
 
 reg [2:0] state, next_state;
-reg [24:0] counter;
+reg [31:0] counter;
 assign led1 = state == S0;
 assign led2 = state == S1;
 assign led3 = state == S2;
 assign led4 = state == S3;
+
 always @(posedge clk_i or negedge reset_i)
 begin
 	if(!reset_i)
@@ -34,7 +36,7 @@ begin
 		S3: begin soft_reset_o = 1'b1; hard_reset_o = 1'b1; end
 		S4:
 		begin
-			if(counter == 25'h30e_3600) //25'h16e_3600
+			if(counter == 2*SYS_CLK_FREQ) //25'h30e_3600
 				hard_reset_o = 1'b0;
 			else
 				hard_reset_o = 1'b1;
@@ -49,7 +51,7 @@ begin
 	case(state)
 		S0:
 		begin
-			if(uart_rx_irq && uart_rx_byte == 8'h5f) // 0x5f == '_'
+			if(uart_rx_irq && uart_rx_byte == 8'h2d) // 0x2d == '-'
 				next_state = S1;
 			else
 				next_state = S0;
@@ -79,7 +81,7 @@ begin
 		
 		S4:
 		begin
-			if(counter == 25'h30e_3600)
+			if(counter == 2*SYS_CLK_FREQ)
 				next_state = S0;
 			else
 				next_state = S4;
@@ -92,18 +94,18 @@ end
 always @(posedge clk_i or negedge reset_i)
 begin
 	if(!reset_i)
-		counter <= 25'b0;
+		counter <= 32'b0;
 	else
 	begin
 		if(state == S4)
 		begin
 			if(uart_rx_irq)
-                counter <= 25'b0;
+                counter <= 32'b0;
             else
-                counter <= counter + 25'b1;
+                counter <= counter + 32'b1;
 		end
 		else
-			counter <= 25'b0;
+			counter <= 32'b0;
 	end
 end
 

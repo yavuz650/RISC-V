@@ -6,7 +6,9 @@ module uart_top(input clk_i,
                 output tx_o,
                 output irq_ack_o,
                 output led1,led2,led3,led4);
-                  			  
+
+parameter SYS_CLK_FREQ = 100000000;
+
 wire [3:0] data_wmask;
 wire data_wen, mtip_o;
 wire [31:0] instr_addr_o, data_addr_o;
@@ -89,14 +91,16 @@ mtime_registers mtime0(.reset_i(reset),
                        .mtip_o(mtip_o),
                        .data_o(mtime_data_o));
 
-uart uart0 (.clk_i(clk_i), .reset_i(reset), .rx_i(rx_i),
+uart #(.SYS_CLK_FREQ(SYS_CLK_FREQ), .BAUD(9600)) uart0 
+           (.clk_i(clk_i), .reset_i(reset), .rx_i(rx_i),
             .csb_i(uart_csb), .wen_i(data_wen_reg),
             .data_i(core_data_o_reg[7:0]),
             .wmask_i(data_wmask_reg),
             .tx_o(tx_o), .receive_irq(uart_rx_irq),
             .data_o(uart_data_o));
 
-loader loader0(.clk_i(clk_i),
+loader #(.SYS_CLK_FREQ(SYS_CLK_FREQ)) loader0
+              (.clk_i(clk_i),
                .reset_i(reset_i),
                .uart_rx_irq(uart_rx_irq),
                .uart_rx_byte(uart_data_o[15:8]),

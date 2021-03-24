@@ -6,7 +6,11 @@ module uart(input clk_i, reset_i, rx_i,
             input [3:0] wmask_i,
             output tx_o, receive_irq,
             output [31:0] data_o);
-            
+
+parameter SYS_CLK_FREQ = 100000000;
+parameter BAUD = 9600;
+parameter CLK_DIVIDER = SYS_CLK_FREQ / BAUD; 
+
 wire [2:0] uart_status;
 wire [7:0] rx_byte;
 wire transmit;
@@ -16,7 +20,7 @@ assign transmit = !wen_i & !csb_i & wmask_i[0];
 assign data_o = {8'b0,5'b0,uart_status,rx_byte,8'b0};
 assign uart_status[0] = 1'b0;
 assign uart_status[2] = 1'b0;
-UART_TX uart_tx0
+UART_TX #(.CLKS_PER_BIT(CLK_DIVIDER)) uart_tx0
   (
       .i_Rst_L(reset_i),
       .i_Clock(clk_i),
@@ -26,7 +30,7 @@ UART_TX uart_tx0
       .o_TX_Serial(tx_o),
       .o_TX_Done(tx_irq));
       
-UART_RX uart_rx0
+UART_RX #(.CLKS_PER_BIT(CLK_DIVIDER)) uart_rx0
         (  .i_Rst_L(reset_i),
            .i_Clock(clk_i),
            .i_RX_Serial(rx_i),
