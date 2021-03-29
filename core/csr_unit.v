@@ -34,7 +34,11 @@ wire pending_irq, pending_exception;
 wire csr_if_flush, csr_id_flush, csr_ex_flush, csr_mem_flush;
 wire reset_i;
 reg [31:0] mcause_buf;
+wire [31:0] direct_mode_addr, vector_mode_addr;
+
 assign reset_i = hreset_i & sreset_i;
+assign direct_mode_addr = mtvec;
+assign vector_mode_addr = mcause_buf[31] ? {mtvec[31:1],1'b0} + (mcause_buf << 2) : {mtvec[31:1],1'b0};
 
 assign pending_exception = (illegal_instr_i | instr_addr_misaligned_i | ecall_i | ebreak_i) & ~take_branch_i;
 assign pending_irq = (`mie_meie & `mip_meip) | (`mie_mtie & `mip_mtip);
@@ -44,7 +48,7 @@ assign csr_ex_flush = csr_mem_flush | (`mstatus_mie & pending_irq & !ex_dummy_i 
 assign csr_mem_flush = `mstatus_mie & pending_irq & mem_wen_i & !mem_dummy_i;
 
 //outputs
-assign irq_addr_o = mcause_buf[31] ? (mtvec >> 2) + (mcause_buf << 2) : mtvec >> 2;
+assign irq_addr_o = mtvec[0] ? vector_mode_addr : direct_mode_addr;
 assign mux1_ctrl_o = mret_id_i & ~take_branch_i;
 assign mux2_ctrl_o = !((STATE == `S1) | (mret_id_i & ~take_branch_i));
 assign csr_if_flush_o = csr_if_flush;
