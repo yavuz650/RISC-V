@@ -1,16 +1,27 @@
-#define MTIME_ADDR 0x00000800
-#define MTIMECMP_ADDR 0x00000808
-
 #define ENABLE_GLOBAL_IRQ() __asm__("csrsi mstatus,0x8\n"); //enables interrupts globally by setting the mie bit in mstatus register.
 #define DISABLE_GLOBAL_IRQ() __asm__("csrci mstatus,0x8\n"); //disables interrupts globally by clearing the mie bit in mstatus register.
 
-//sets mtvec's value to the beginning of the vector table.
+//interrupt routines for vectored mode.
+void mei_handler() __attribute__ (( interrupt ("machine")));
+void mti_handler() __attribute__ (( interrupt ("machine")));
+void exc_handler() __attribute__ (( interrupt ("machine")));
+//trap handler for direct mode.
+void direct_trap_handler() __attribute__ (( interrupt ("machine")));
+
+//sets mtvec's value to the beginning of the vector table, and set the LSB.
 static inline void SET_MTVEC_VECTOR_MODE()
 {
     int base_addr;
     __asm__ volatile ("la %[base_addr],exc" :[base_addr] "=r" (base_addr): );
-    base_addr = base_addr << 2;
-    base_addr |= 0x1;
+    base_addr |= 0x1; //vector mode
+    __asm__ volatile ("csrw mtvec,%[base_addr]" :: [base_addr] "r" (base_addr));
+}
+
+//sets mtvec's value to the address of the trap handler function.
+static inline void SET_MTVEC_DIRECT_MODE()
+{
+    int base_addr;
+    base_addr = &direct_trap_handler;
     __asm__ volatile ("csrw mtvec,%[base_addr]" :: [base_addr] "r" (base_addr));
 }
 
@@ -41,11 +52,6 @@ static inline void DISABLE_MEI()
     __asm__ volatile ("csrc mie,%[mask]" :: [mask] "r" (mask));
 }
 
-void mei_handler() __attribute__ (( interrupt ("machine")));
-void mti_handler() __attribute__ (( interrupt ("machine")));
-void exc_handler() __attribute__ (( interrupt ("machine")));
-
-
 __asm__("exc: j exc_handler\n");
 __asm__("ssi: nop\n");
 __asm__("hsi: nop\n");
@@ -58,3 +64,4 @@ __asm__("uei: nop\n");
 __asm__("sei: nop\n");
 __asm__("hei: nop\n");
 __asm__("mei: j mei_handler\n");
+
