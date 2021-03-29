@@ -1,5 +1,6 @@
-#include "../itucore.h"
-
+#include "../../lib/irq.h"
+#define MTIME_ADDR 0x00002000
+#define MTIMECMP_ADDR 0x00002008
 int dum;
 
 void sorter(int* arr, int len)
