@@ -1,11 +1,11 @@
 `timescale 1ns/10ps
 
 module ALU(input [31:0] src1,
-		   input [31:0] src2,
-		   input [3:0]  func1,
-		   input [1:0]  func2,
+           input [31:0] src2,
+           input [3:0]  func1,
+           input [1:0]  func2,
 		
-		   output reg [31:0] alu_out);
+           output reg [31:0] alu_out);
 
 wire [4:0] shamt;
 assign shamt = src2[4:0];

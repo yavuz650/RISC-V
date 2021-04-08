@@ -183,29 +183,29 @@ csr_unit CSR_UNIT(.clk_i(clk_i),
                   .csr_reg_i(imm_WB),
                   .csr_wen_i(csr_wen_WB), 
                   .meip_i(meip_i), 
-				  .mtip_i(mtip_i), 
+                  .mtip_i(mtip_i), 
                   .take_branch_i(take_branch),
                   .mret_id_i(mret_ID), 
-				  .mret_wb_i(mret_WB),
+                  .mret_wb_i(mret_WB),
                   .misaligned_ex(IDEX_preg_misaligned),
 
                   .csr_reg_o(csr_reg_out), 
-				  .mepc_o(mepc),
+                  .mepc_o(mepc),
                   .irq_addr_o(irq_addr),
                   .mux1_ctrl_o(mux1_ctrl_IF), 
-				  .mux2_ctrl_o(mux4_ctrl_IF), 
-				  .ack_o(irq_ack_o),
+                  .mux2_ctrl_o(mux4_ctrl_IF), 
+                  .ack_o(irq_ack_o),
                   .mem_wen_i(mem_MEM[0]), 
-				  .ex_dummy_i(IDEX_preg_dummy), 
-				  .mem_dummy_i(EXMEM_preg_dummy),
+                  .ex_dummy_i(IDEX_preg_dummy), 
+                  .mem_dummy_i(EXMEM_preg_dummy),
                   .csr_if_flush_o(csr_if_flush), 
-				  .csr_id_flush_o(csr_id_flush), 
-				  .csr_ex_flush_o(csr_ex_flush), 
-				  .csr_mem_flush_o(csr_mem_flush),
+                  .csr_id_flush_o(csr_id_flush), 
+                  .csr_ex_flush_o(csr_ex_flush), 
+                  .csr_mem_flush_o(csr_mem_flush),
                   .illegal_instr_i(ctrl_unit_illegal_instr), 
-				  .ecall_i(ctrl_unit_ecall), 
-				  .ebreak_i(ctrl_unit_ebreak), 
-				  .instr_addr_misaligned_i(instr_addr_misaligned));
+                  .ecall_i(ctrl_unit_ecall), 
+                  .ebreak_i(ctrl_unit_ebreak), 
+                  .instr_addr_misaligned_i(instr_addr_misaligned));
 
 assign reset_i = hreset_i & sreset_i;
 //IF STAGE---------------------------------------------------------------------------------
@@ -261,44 +261,44 @@ assign csr_addr_ID  = IFID_preg_instr[31:20];
 //assign nets
 assign mux1_o_ID    = mux_ctrl_ID ? 7'h0c : {ctrl_unit_wb_mux, 
                                              ctrl_unit_wb_sign, 
-											 ctrl_unit_wb_rf_wen, 
-											 ctrl_unit_wb_csr_wen, 
-											 ctrl_unit_mem_len};
+                                             ctrl_unit_wb_rf_wen, 
+                                             ctrl_unit_wb_csr_wen, 
+                                             ctrl_unit_mem_len};
 											 
 assign mux2_o_ID    = mux_ctrl_ID ? 3'b1 : {ctrl_unit_mem_len, ctrl_unit_mem_wen};
 
 assign mux3_o_ID    = mux_ctrl_ID ? 15'b0 : {ctrl_unit_B, 
                                              ctrl_unit_J, 
-											 ctrl_unit_ex_mux7, 
-											 ctrl_unit_ex_mux6, 
-											 ctrl_unit_ex_mux5, 
-											 ctrl_unit_ex_mux3, 
-											 ctrl_unit_ex_mux1, 
-											 ctrl_unit_alu_func2, 
-											 ctrl_unit_alu_func1};
+                                             ctrl_unit_ex_mux7, 
+                                             ctrl_unit_ex_mux6, 
+                                             ctrl_unit_ex_mux5, 
+                                             ctrl_unit_ex_mux3, 
+                                             ctrl_unit_ex_mux1, 
+                                             ctrl_unit_alu_func2, 
+                                             ctrl_unit_alu_func1};
 
 control_unit    CTRL_UNIT   (.instr_i(IFID_preg_instr),
                              .ALU_func1(ctrl_unit_alu_func1),
                              .ALU_func2(ctrl_unit_alu_func2),
                              .EX_mux5(ctrl_unit_ex_mux5), 
-							 .EX_mux6(ctrl_unit_ex_mux6), 
-							 .EX_mux7(ctrl_unit_ex_mux7),
+                             .EX_mux6(ctrl_unit_ex_mux6), 
+                             .EX_mux7(ctrl_unit_ex_mux7),
                              .EX_mux1(ctrl_unit_ex_mux1), 
-							 .EX_mux3(ctrl_unit_ex_mux3),
+                             .EX_mux3(ctrl_unit_ex_mux3),
                              .B(ctrl_unit_B), 
-							 .J(ctrl_unit_J),
+                             .J(ctrl_unit_J),
                              .MEM_len(ctrl_unit_mem_len),
                              .MEM_wen(ctrl_unit_mem_wen), 
-							 .WB_rf_wen(ctrl_unit_wb_rf_wen), 
-							 .WB_csr_wen(ctrl_unit_wb_csr_wen),
+                             .WB_rf_wen(ctrl_unit_wb_rf_wen), 
+                             .WB_csr_wen(ctrl_unit_wb_csr_wen),
                              .WB_mux(ctrl_unit_wb_mux),
                              .WB_sign(ctrl_unit_wb_sign),
                              .illegal_instr(ctrl_unit_illegal_instr), 
-							 .ecall_o(ctrl_unit_ecall), 
-							 .ebreak_o(ctrl_unit_ebreak),
+                             .ecall_o(ctrl_unit_ecall), 
+                             .ebreak_o(ctrl_unit_ebreak),
                              .mret_o(mret_ID));
                              
-imm_decoder     IMM_DEC   	(.instr_in(imm_dec_i), .imm_out(imm_dec_o));
+imm_decoder     IMM_DEC	    (.instr_in(imm_dec_i), .imm_out(imm_dec_o));
 
 //write to register file
 integer i;
@@ -396,12 +396,12 @@ end
 //EX STAGE---------------------------------------------------------------------------------
 hazard_detection_unit HZRD_DET_UNIT (.rs1(rs1_ID), 
                                      .rs2(rs2_ID), 
-									 .opcode(IFID_preg_instr[6:2]), 
-									 .funct3(IFID_preg_instr[14]), 
-									 .idex_rd(rd_EX), 
-									 .idex_mem(L), 
-									 .id_mux(mux_ctrl_ID), 
-									 .ifid_write_en(hazard_stall_IF));
+                                     .opcode(IFID_preg_instr[6:2]), 
+                                     .funct3(IFID_preg_instr[14]), 
+                                     .idex_rd(rd_EX), 
+                                     .idex_mem(L), 
+                                     .id_mux(mux_ctrl_ID), 
+                                     .ifid_write_en(hazard_stall_IF));
 
 //assign fields
 assign wb_EX    = IDEX_preg_wb;
@@ -454,18 +454,18 @@ assign mux8_o_EX = mux8_ctrl_EX == 2'd0 ? imm_WB
 //instantiate the forwarding unit.
 forwarding_unit FWD_UNIT(.rs1(rs1_EX),
                          .rs2(rs2_EX),
-						 .exmem_rd(rd_MEM),
-						 .memwb_rd(rd_WB),
-						 .exmem_wb(wb_MEM[3]),
-						 .memwb_wb(rf_wen_WB),
-						 .mux1_ctrl(mux2_ctrl_EX),
-						 .mux2_ctrl(mux4_ctrl_EX),
-						 .mux3_ctrl(mux8_ctrl_EX),
+                         .exmem_rd(rd_MEM),
+                         .memwb_rd(rd_WB),
+                         .exmem_wb(wb_MEM[3]),
+                         .memwb_wb(rf_wen_WB),
+                         .mux1_ctrl(mux2_ctrl_EX),
+                         .mux2_ctrl(mux4_ctrl_EX),
+                         .mux3_ctrl(mux8_ctrl_EX),
                          .csr_addr_EX(csr_addr_EX),
-						 .csr_addr_MEM(csr_addr_MEM),
-						 .csr_addr_WB(csr_addr_WB),
-						 .csr_wen_MEM(wb_MEM[2]),
-						 .csr_wen_WB(csr_wen_WB));
+                         .csr_addr_MEM(csr_addr_MEM),
+                         .csr_addr_WB(csr_addr_WB),
+                         .csr_wen_MEM(wb_MEM[2]),
+                         .csr_wen_WB(csr_wen_WB));
 //instantiate the ALU
 ALU ALU (.src1(mux1_o_EX), .src2(mux3_o_EX), .func1(alu_func1), .func2(alu_func2), .alu_out(aluout_EX));
 
