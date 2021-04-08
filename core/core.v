@@ -4,7 +4,7 @@ module core(input hreset_i, sreset_i,  //active-low resets. all write_enable sig
                                        //different reset signals set mcause to different values.
             input clk_i,
 
-			input  [31:0] data_i,       //data memory input
+            input  [31:0] data_i,       //data memory input
             output [3:0]  data_wmask_o, //data memory mask output
             output        data_wen_o,   //data memory write enable output
             output [31:0] data_addr_o,  //data memory address output
@@ -533,7 +533,7 @@ load_store_unit LS_UNIT (.addr_i(aluout_EX),
                          .load_i(L),
                          .wen_i(mem_EX[0]),
                          .misaligned_EX_i(IDEX_preg_misaligned), 
-						 .misaligned_MEM_i(EXMEM_preg_misaligned),
+                         .misaligned_MEM_i(EXMEM_preg_misaligned),
                          .read_data_i(data_i),
                          .length_MEM_i(mem_MEM[2:1]),
                          .addr_offset_i(EXMEM_preg_addr_bits),
@@ -548,7 +548,7 @@ assign data_wen_o  = csr_ex_flush ? 1'b1 : mem_EX[0];
 //MEM STAGE---------------------------------------------------------------------------------
 assign wb_MEM 	    = EXMEM_preg_wb;
 assign mem_MEM 	    = EXMEM_preg_mem;
-assign aluout_MEM   =  EXMEM_preg_aluout;
+assign aluout_MEM   = EXMEM_preg_aluout;
 assign data2_MEM    = EXMEM_preg_data2;
 assign rd_MEM 	    = EXMEM_preg_rd;
 assign pc_MEM       = EXMEM_preg_pc;
