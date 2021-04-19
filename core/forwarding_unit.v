@@ -3,7 +3,7 @@ Register Forwarding Unit
 This module is responsible for detecting pipeline data hazards, and generating the controls signals
 for the forwarding muxes(2, 4 and 8) in the EX stage.
 It can forward data from MEM or the WB stage to EX stage, when necessary.
-It is also responsible for the forwarding of the CSR registers.
+It is also responsible for the forwarding of the CSRs.
 */
 
 `timescale 1ns/10ps

@@ -15,20 +15,20 @@ The module utilizes a finite state machine to realize the task.
 
 module csr_unit(input clk_i, 
                 input hreset_i, //hardware reset
-				input sreset_i, //software reset
+                input sreset_i, //software reset
                 input [31:0] pc_i,
                 input [11:0] csr_r_addr_i, //CSR read address
                 input [11:0] csr_w_addr_i, //CSR write address
                 input [31:0] csr_reg_i, //CSR input
                 input csr_wen_i, //CSR write enable
-				input meip_i, //machine external interrupt
-				input mtip_i, //machine timer interrupt
-				input take_branch_i,
+                input meip_i, //machine external interrupt
+                input mtip_i, //machine timer interrupt
+                input take_branch_i,
                 input mem_wen_i, //MEM stage write enable signal
-				input ex_dummy_i,
-				input mem_dummy_i,
+                input ex_dummy_i,
+                input mem_dummy_i,
                 input mret_id_i,
-				input mret_wb_i,
+                input mret_wb_i,
                 input misaligned_ex,
                 input illegal_instr_i, instr_addr_misaligned_i, ecall_i, ebreak_i,
 
