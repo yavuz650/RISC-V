@@ -1,13 +1,25 @@
 `timescale 1ns/1ps
 
-module uart_top(input clk_i,
+module uart_top(input M100_clk_i,
                 input reset_i,
                 input rx_i,
                 output tx_o,
                 output irq_ack_o,
                 output led1,led2,led3,led4);
 
-parameter SYS_CLK_FREQ = 100000000;
+parameter SYS_CLK_FREQ = 60000000;
+
+wire clk_i, locked;
+ clk_wiz_0 clkwiz0 
+ (
+  // Clock out ports
+         .clk_out1(clk_i),
+  // Status and control signals
+           .resetn(reset_i),
+          .locked(locked),
+ // Clock in ports
+           .clk_in1(M100_clk_i)
+ );
 
 wire [3:0] data_wmask;
 wire data_wen, mtip_o;
