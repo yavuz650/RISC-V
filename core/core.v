@@ -39,6 +39,7 @@ wire [4:0]  rs1_ID, rs2_ID, rd_ID; //register addresses
 wire [31:0] data1_ID, data2_ID;
 wire [11:0] csr_addr_ID; //CSR register address
 wire        mret_ID; //driven high when the instruction in ID stage is MRET.
+wire        hazard_stall_ID;
 //control unit outputs
 wire [3:0] ctrl_unit_alu_func1;
 wire [1:0] ctrl_unit_alu_func2;
@@ -98,6 +99,7 @@ wire        misaligned_access; //driven high when the first part of a misaligned
 wire        mem_wen_EX;
 wire [1:0]  mem_length_EX;
 wire        instr_addr_misaligned; //driven high when the calculated instruction address is misaligned, which causes an exception.
+wire        hazard_stall; //output of the hazard detection unit.
 //branch signals
 wire [31:0] branch_target_addr; //branch target address, calculated in EX stage.
 wire [31:0] branch_addr_calc; //intermediate value during address calculation.
@@ -220,6 +222,8 @@ assign mux4_o_IF = mux4_ctrl_IF ? mux3_o_IF : mux1_o_IF;
 assign pc_i = reset_i ? mux4_o_IF : reset_vector;
 assign instr_addr_o = pc_i;
 
+assign hazard_stall_IF = hazard_stall;
+
 always @(posedge clk_i or negedge reset_i) 
 begin
 	if(!reset_i)
@@ -259,6 +263,9 @@ assign pc_ID        = IFID_preg_pc;
 assign imm_dec_i    = IFID_preg_instr[31:2];
 assign csr_addr_ID  = IFID_preg_instr[31:20];
 //assign nets
+assign hazard_stall_ID = hazard_stall;
+assign mux_ctrl_ID = hazard_stall;
+
 assign mux1_o_ID    = mux_ctrl_ID ? 7'h0c : {ctrl_unit_wb_mux, 
                                              ctrl_unit_wb_sign, 
                                              ctrl_unit_wb_rf_wen, 
@@ -340,7 +347,7 @@ begin
 		{IDEX_preg_pc, IDEX_preg_data1, IDEX_preg_data2} <= 96'b0;
 		{IDEX_preg_rs1, IDEX_preg_rs2, IDEX_preg_rd} <= 15'b0;
 		IDEX_preg_imm  <= 32'b0;
-		IDEX_preg_dummy <= 1'b0;
+		IDEX_preg_dummy <= 1'b1;
 		IDEX_preg_mret <= 1'b0;
 		IDEX_preg_misaligned <= 1'b0;
 	end
@@ -374,7 +381,7 @@ begin
 		IDEX_preg_mret <= mret_ID;
 		IDEX_preg_misaligned <= 1'b0;
 		
-		if(!hazard_stall_IF)
+		if(!hazard_stall_ID)
 			IDEX_preg_dummy <= IFID_preg_dummy;
 		else
 			IDEX_preg_dummy <= 1'b1;
@@ -398,11 +405,9 @@ hazard_detection_unit HZRD_DET_UNIT (.rs1(rs1_ID),
                                      .rs2(rs2_ID), 
                                      .opcode(IFID_preg_instr[6:2]), 
                                      .funct3(IFID_preg_instr[14]), 
-                                     .idex_rd(rd_EX), 
-                                     .idex_mem(L), 
-                                     .id_mux(mux_ctrl_ID), 
-                                     .ifid_write_en(hazard_stall_IF));
-
+                                     .rd_EX(rd_EX), 
+                                     .L_EX(L), 
+                                     .hazard_stall(hazard_stall));
 //assign fields
 assign wb_EX    = IDEX_preg_wb;
 assign mem_EX   = IDEX_preg_mem;
@@ -500,7 +505,7 @@ begin
 		{EXMEM_preg_pc, EXMEM_preg_aluout, EXMEM_preg_data2} <= 96'b0;
 		EXMEM_preg_rd <= 5'b0;
 		EXMEM_preg_imm <= 32'b0;
-		EXMEM_preg_dummy <= 1'b0;
+		EXMEM_preg_dummy <= 1'b1;
 		EXMEM_preg_mret <= 1'b0;
 		EXMEM_preg_misaligned <= 1'b0;
 		EXMEM_preg_addr_bits <= 2'b0;

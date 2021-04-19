@@ -1,14 +1,9 @@
+/*
+Control Unit
+This module is responsible for generating the necessary control signals for the core.
+*/
+
 `timescale 1ns/1ps
-
-//mux input signals
-`define data1_EX  2'b0
-`define data2_EX  2'b0
-`define imm_EX    2'b1
-`define pc_EX     2'b1
-
-`define aluout_MEM 2'd0
-`define memout_MEM 2'd1
-`define imm_MEM    2'd2
 
 module control_unit(input [31:0] instr_i, 
 
@@ -17,13 +12,23 @@ module control_unit(input [31:0] instr_i,
                     output reg EX_mux5, EX_mux6, EX_mux7,
                     output reg [1:0] EX_mux1, EX_mux3,
                     output reg B, J,
-                    output reg [1:0] MEM_len,
-                    output reg MEM_wen, WB_rf_wen, WB_csr_wen,
+                    output reg [1:0] MEM_len, //memory load-store length
+                    output reg MEM_wen, WB_rf_wen, WB_csr_wen, //memory write enable, register file write enable, CSR unit write enable
                     output reg [1:0] WB_mux,
-                    output reg WB_sign,
-                    output reg illegal_instr,
-                    output     ecall_o, ebreak_o,
+                    output reg WB_sign, //load-store sign
+                    output reg illegal_instr, //illegal instruction exception
+                    output     ecall_o, ebreak_o, //ecall and ebreak exception signals
                     output     mret_o);
+
+//mux input signals, do not override
+parameter data1_EX = 2'b0;
+parameter data2_EX = 2'b0;
+parameter imm_EX   = 2'b1;
+parameter pc_EX    = 2'b1;
+
+parameter aluout_MEM = 2'd0;
+parameter memout_MEM = 2'd1;
+parameter imm_MEM    = 2'd2;
 
 wire [6:0] opcode;
 wire [2:0] funct3;
@@ -39,8 +44,20 @@ begin
 		//BEQ, BNE, BLT, BGE, BLTU, BGEU
 		7'b11000_11: 
 		begin 
-			WB_rf_wen = 1'b1; WB_csr_wen = 1'b1; WB_mux = `aluout_MEM; WB_sign = 1'b0; MEM_len = 2'b0; MEM_wen = 1'b1; ALU_func2 = 2'b0;
-			B = 1'b1; J = 1'b0; EX_mux7 = 1'b1; EX_mux6 = 1'b0; EX_mux5 = 1'b1; EX_mux3 = `data2_EX; EX_mux1 = `data1_EX; 
+			WB_rf_wen = 1'b1; 
+			WB_csr_wen = 1'b1; 
+			WB_mux = aluout_MEM; 
+			WB_sign = 1'b0; 
+			MEM_len = 2'b0; 
+			MEM_wen = 1'b1; 
+			ALU_func2 = 2'b0;
+			B = 1'b1; 
+			J = 1'b0; 
+			EX_mux7 = 1'b1; 
+			EX_mux6 = 1'b0; 
+			EX_mux5 = 1'b1; 
+			EX_mux3 = data2_EX; 
+			EX_mux1 = data1_EX; 
 			case(funct3)
 				3'b000: ALU_func1 = 4'b1010; //BEQ
 				3'b001: ALU_func1 = 4'b1011; //BNE
@@ -55,22 +72,61 @@ begin
 		//LUI
 		7'b01101_11: 
 		begin 
-			WB_rf_wen = 1'b0; WB_csr_wen = 1'b1; WB_mux = `aluout_MEM; WB_sign = 1'b0; MEM_len = 2'b0; MEM_wen = 1'b1; ALU_func2 = 2'b1;
-			B = 1'b0; J = 1'b0; EX_mux7 = 1'b1; EX_mux6 = 1'b0; EX_mux5 = 1'b0; EX_mux3 = `imm_EX; EX_mux1 = `pc_EX; ALU_func1 = 4'b1111;  
+			WB_rf_wen = 1'b0; 
+			WB_csr_wen = 1'b1; 
+			WB_mux = aluout_MEM; 
+			WB_sign = 1'b0; 
+			MEM_len = 2'b0; 
+			MEM_wen = 1'b1; 
+			ALU_func2 = 2'b1;
+			B = 1'b0; 
+			J = 1'b0; 
+			EX_mux7 = 1'b1; 
+			EX_mux6 = 1'b0; 
+			EX_mux5 = 1'b0; 
+			EX_mux3 = imm_EX; 
+			EX_mux1 = pc_EX; 
+			ALU_func1 = 4'b1111;  
 		end
 		
 		//AUIPC
 		7'b00101_11: 
 		begin 
-			WB_rf_wen = 1'b0; WB_csr_wen = 1'b1; WB_mux = `imm_MEM; WB_sign = 1'b0; MEM_len = 2'b0; MEM_wen = 1'b1; ALU_func2 = 2'b0;
-			B = 1'b0; J = 1'b0; EX_mux7 = 1'b1; EX_mux6 = 1'b0; EX_mux5 = 1'b0; EX_mux3 = `imm_EX; EX_mux1 = `pc_EX; ALU_func1 = 4'b0000;  
+			WB_rf_wen = 1'b0; 
+			WB_csr_wen = 1'b1; 
+			WB_mux = imm_MEM; 
+			WB_sign = 1'b0; 
+			MEM_len = 2'b0; 
+			MEM_wen = 1'b1; 
+			ALU_func2 = 2'b0;
+			B = 1'b0; 
+			J = 1'b0; 
+			EX_mux7 = 1'b1; 
+			EX_mux6 = 1'b0; 
+			EX_mux5 = 1'b0; 
+			EX_mux3 = imm_EX; 
+			EX_mux1 = pc_EX; 
+			ALU_func1 = 4'b0000;  
 		end 
 		
 		//JAL, JALR
 		7'b110?1_11: 
 		begin
-			WB_rf_wen = 1'b0; WB_csr_wen = 1'b1; WB_mux = `aluout_MEM; WB_sign = 1'b0; MEM_len = 2'b0; MEM_wen = 1'b1; ALU_func2 = 2'b0;
-			B = 1'b0; J = 1'b1; EX_mux7 = 1'b1; EX_mux6 = 1'b0; EX_mux3 = `data2_EX; EX_mux1 = `pc_EX; ALU_func1 = 4'b1110; 
+			WB_rf_wen = 1'b0;
+			WB_csr_wen = 1'b1;
+			WB_mux = aluout_MEM;
+			WB_sign = 1'b0;
+			MEM_len = 2'b0;
+			MEM_wen = 1'b1;
+			ALU_func2 = 2'b0;
+			B = 1'b0;
+			J = 1'b1;
+			EX_mux7 = 1'b1;
+			EX_mux6 = 1'b0;
+			EX_mux3 = data2_EX;
+			EX_mux1 = pc_EX;
+			ALU_func1 = 4'b1110;
+
 			case(opcode[3])
 				1'b1: EX_mux5 = 1'b1; //JAL
 				1'b0: EX_mux5 = 1'b0; //JALR
@@ -80,8 +136,20 @@ begin
 		//LB, LH, LW, LBU, LHU
 		7'b00000_11: 
 		begin
-			WB_rf_wen = 1'b0; WB_csr_wen = 1'b1; WB_mux = `memout_MEM; MEM_wen = 1'b1; ALU_func2 = 2'b0;
-			B = 1'b0; J = 1'b0; EX_mux7 = 1'b1; EX_mux6 = 1'b0; EX_mux5 = 1'b0; EX_mux3 = `imm_EX; EX_mux1 = `data1_EX; ALU_func1 = 4'b0000; 
+			WB_rf_wen = 1'b0;
+			WB_csr_wen = 1'b1;
+			WB_mux = memout_MEM;
+			MEM_wen = 1'b1;
+			ALU_func2 = 2'b0;
+			B = 1'b0;
+			J = 1'b0;
+			EX_mux7 = 1'b1;
+			EX_mux6 = 1'b0;
+			EX_mux5 = 1'b0;
+			EX_mux3 = imm_EX;
+			EX_mux1 = data1_EX;
+			ALU_func1 = 4'b0000;
+
 			case(funct3)
 				3'b000: begin WB_sign = 1'b1; MEM_len = 2'd0; end //LB 
 				3'b001: begin WB_sign = 1'b1; MEM_len = 2'd1; end //LH
@@ -95,8 +163,21 @@ begin
 		//SB, SH, SW
 		7'b01000_11: 
 		begin 
-			WB_rf_wen = 1'b1; WB_csr_wen = 1'b1; WB_mux = `aluout_MEM; WB_sign = 1'b0; MEM_wen = 1'b0; ALU_func2 = 2'b0;
-			B = 1'b0; J = 1'b0; EX_mux7 = 1'b1; EX_mux6 = 1'b0; EX_mux5 = 1'b0; EX_mux3 = `imm_EX; EX_mux1 = `data1_EX; ALU_func1 = 4'b0000; 
+			WB_rf_wen = 1'b1; 
+			WB_csr_wen = 1'b1; 
+			WB_mux = aluout_MEM; 
+			WB_sign = 1'b0; 
+			MEM_wen = 1'b0; 
+			ALU_func2 = 2'b0;
+			B = 1'b0; 
+			J = 1'b0; 
+			EX_mux7 = 1'b1; 
+			EX_mux6 = 1'b0; 
+			EX_mux5 = 1'b0; 
+			EX_mux3 = imm_EX; 
+			EX_mux1 = data1_EX; 
+			ALU_func1 = 4'b0000; 
+
 			case(funct3)
 				3'b000: MEM_len = 2'd0; //SB
 				3'b001: MEM_len = 2'd1; //SH
@@ -108,12 +189,23 @@ begin
 		//ADDI, SLTI, SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI, ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND
 		7'b0?100_11: 
 		begin
-			WB_rf_wen = 1'b0; WB_csr_wen = 1'b1; WB_mux = `aluout_MEM; WB_sign = 1'b0; MEM_len = 2'b0; MEM_wen = 1'b1; ALU_func2 = 2'b0;
-			B = 1'b0; J = 1'b0; EX_mux7 = 1'b1; EX_mux6 = 1'b0; EX_mux5 = 1'b0; EX_mux1 = `data1_EX; 
+			WB_rf_wen = 1'b0; 
+			WB_csr_wen = 1'b1; 
+			WB_mux = aluout_MEM; 
+			WB_sign = 1'b0; 
+			MEM_len = 2'b0; 
+			MEM_wen = 1'b1; 
+			ALU_func2 = 2'b0;
+			B = 1'b0; 
+			J = 1'b0; 
+			EX_mux7 = 1'b1; 
+			EX_mux6 = 1'b0; 
+			EX_mux5 = 1'b0; 
+			EX_mux1 = data1_EX; 
 			
 			case(opcode[5]) 
-				1'b0: EX_mux3 = `imm_EX;
-				1'b1: EX_mux3 = `data2_EX;
+				1'b0: EX_mux3 = imm_EX;
+				1'b1: EX_mux3 = data2_EX;
 			endcase
 			
 			case(funct3)
@@ -145,12 +237,20 @@ begin
 		//CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI
 		7'b11100_11: 
 		begin
-			WB_rf_wen = 1'b0; WB_csr_wen = 1'b0; WB_mux = `aluout_MEM; WB_sign = 1'b0; MEM_len = 2'b0; MEM_wen = 1'b1;
-			B = 1'b0; J = 1'b0; EX_mux5 = 1'b0; EX_mux6 = 1'b1; 
+			WB_rf_wen = 1'b0; 
+			WB_csr_wen = 1'b0; 
+			WB_mux = aluout_MEM; 
+			WB_sign = 1'b0; 
+			MEM_len = 2'b0; 
+			MEM_wen = 1'b1;
+			B = 1'b0; 
+			J = 1'b0; 
+			EX_mux5 = 1'b0; 
+			EX_mux6 = 1'b1; 
 			
 			case(funct3[2])
-				1'b0: begin EX_mux1 = `data1_EX; EX_mux3 = 2'd2; EX_mux7 = 1'b0; end //register
-				1'b1: begin EX_mux1 = 2'd2; EX_mux3 = `imm_EX; EX_mux7 = 1'b1; end //immediate
+				1'b0: begin EX_mux1 = data1_EX; EX_mux3 = 2'd2; EX_mux7 = 1'b0; end //register
+				1'b1: begin EX_mux1 = 2'd2; EX_mux3 = imm_EX; EX_mux7 = 1'b1; end //immediate
 			endcase
 			
 			casez(funct3)
@@ -164,7 +264,16 @@ begin
 		
 		end
 		
-		default: {ALU_func1,ALU_func2,EX_mux5,EX_mux6,EX_mux7,EX_mux1,EX_mux3,B,J,MEM_len,WB_mux,WB_sign,MEM_wen,WB_rf_wen,WB_csr_wen} = 23'h7;//{8'h1,11'h0,4'h7};// //nop
+		default: begin
+			ALU_func1 = 4'b0;
+			ALU_func2 = 2'b0;
+			{EX_mux5, EX_mux6, EX_mux7, EX_mux1, EX_mux3} = 7'b0; 
+			{B, J} = 2'b0;
+			MEM_len = 2'b0;
+			WB_mux = 2'b0;
+			WB_sign = 1'b0;
+			{MEM_wen,WB_rf_wen,WB_csr_wen} = 3'b1;
+		end
 
 	endcase
 end
@@ -178,28 +287,28 @@ begin
 	casez(opcode)
 		//BEQ, BNE, BLT, BGE, BLTU, BGEU
 		7'b11000_11: illegal_instr = funct3[2:1] == 2'b01;
-		
+
 		//LUI, AUIPC
 		7'b0?101_11: illegal_instr = 1'b0;
 
 		//JAL, JALR
-		7'b110?1_11: 
+		7'b110?1_11:
 		begin
 			case(opcode[3])
 				1'b1: illegal_instr = 1'b0; //JAL
 				1'b0: illegal_instr = funct3 != 3'd0; //JALR
-			endcase			
+			endcase
 		end
-		
+
 		//LB, LH, LW, LBU, LHU
-		7'b00000_11: 
+		7'b00000_11:
 		begin
 			if(funct3 == 3'd3 || funct3 == 3'd6 || funct3 == 3'd7)
 				illegal_instr = 1'b1;
 			else
 				illegal_instr = 1'b0;
 		end
-		
+
 		//SB, SH, SW
 		7'b01000_11: 
 		begin 
@@ -247,5 +356,3 @@ assign ecall_o = ecall;
 assign ebreak_o = ebreak;
 
 endmodule
-
-

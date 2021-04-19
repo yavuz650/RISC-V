@@ -20,9 +20,7 @@ module load_store_unit(input [31:0] addr_i,
 wire addr_misaligned;
 //EX STAGE   
 //see if the load/store address is misaligned and thus requires two seperate load/store operations
-//only applies to the main memory, which is SRAM
-assign addr_misaligned     = addr_i[11] ? 1'b0 
-                           : (length_EX_i == 2'd2 && addr_i[1:0] != 2'd0) ? 1'b1
+assign addr_misaligned     = (length_EX_i == 2'd2 && addr_i[1:0] != 2'd0) ? 1'b1
                            : (length_EX_i == 2'd1 && addr_i[1:0] == 2'd3) ? 1'b1
                            : 1'b0;
                            
