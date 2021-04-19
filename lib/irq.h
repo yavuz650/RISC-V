@@ -8,7 +8,7 @@ void exc_handler() __attribute__ (( interrupt ("machine")));
 //trap handler for direct mode.
 void direct_trap_handler() __attribute__ (( interrupt ("machine")));
 
-//sets mtvec's value to the beginning of the vector table, and set the LSB.
+//sets mtvec's value to the beginning of the vector table, and sets the LSB.
 static inline void SET_MTVEC_VECTOR_MODE()
 {
     int base_addr;
