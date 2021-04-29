@@ -12,6 +12,8 @@ The module utilizes a finite state machine to realize the task.
 `define mip_meip mip[11]
 `define mie_mtie mie[7]
 `define mip_mtip mip[7]
+`define mie_msie mie[3]
+`define mip_msip mip[3]
 
 module csr_unit(input clk_i, 
                 input hreset_i, //hardware reset
@@ -23,6 +25,8 @@ module csr_unit(input clk_i,
                 input csr_wen_i, //CSR write enable
                 input meip_i, //machine external interrupt
                 input mtip_i, //machine timer interrupt
+                input msip_i, //machine software interrupt
+                input [15:0] fast_irq_i, //fast interrupts
                 input take_branch_i,
                 input mem_wen_i, //MEM stage write enable signal
                 input ex_dummy_i,
@@ -65,6 +69,9 @@ wire csr_if_flush, csr_id_flush, csr_ex_flush, csr_mem_flush;
 wire [31:0] direct_mode_addr, vector_mode_addr;
 
 wire pending_irq, pending_exception;
+wire [31:0] masked_irq;
+reg [4:0] index;
+reg cond;
 
 assign reset_i = hreset_i & sreset_i;
 
@@ -72,7 +79,7 @@ assign direct_mode_addr = mtvec;
 assign vector_mode_addr = mcause_buf[31] ? {mtvec[31:1],1'b0} + (mcause_buf << 2) : {mtvec[31:1],1'b0};
 
 assign pending_exception = (illegal_instr_i | instr_addr_misaligned_i | ecall_i | ebreak_i) & ~take_branch_i;
-assign pending_irq = (`mie_meie & `mip_meip) | (`mie_mtie & `mip_mtip);
+assign pending_irq = masked_irq != 32'b0; //(`mie_meie & `mip_meip) | (`mie_mtie & `mip_mtip);
 
 assign csr_if_flush = (`mstatus_mie & pending_irq) | (STATE == S1) | (mret_id_i & ~take_branch_i) | pending_exception;
 assign csr_id_flush = csr_ex_flush | (`mstatus_mie & pending_irq) | pending_exception;
@@ -91,6 +98,8 @@ assign csr_ex_flush_o = csr_ex_flush;
 assign csr_mem_flush_o = csr_mem_flush;
 
 assign mepc_o = mepc;
+
+assign masked_irq = mie & mip & {32{`mstatus_mie}};
 
 //state transitions are done on the rising edge
 always @(posedge clk_i or negedge reset_i)
@@ -112,43 +121,60 @@ begin
 			
 			STAND_BY:
 			begin
-				if(`mstatus_mie & `mie_meie & `mip_meip)
-				begin
-					STATE <= S1;
-					ack_o <= 1'b1;
-					mcause_buf[31] <= 1'b1;
-					mcause_buf[30:0] <= 31'd11;
-				end
-				
-				else if(`mstatus_mie & `mie_mtie & `mip_mtip)
+				if(masked_irq[31:16] != 16'b0)
 				begin
 					STATE <= S1;
 					mcause_buf[31] <= 1'b1;
-					mcause_buf[30:0] <= 31'd7;					
+					mcause_buf[30:0] <= index;			
 				end
-				else if(instr_addr_misaligned_i & !take_branch_i)
+
+				else
 				begin
-					STATE <= S1;
-					mcause_buf[31] <= 1'b0;
-					mcause_buf[30:0] <= 31'd0;						
-				end
-				else if(illegal_instr_i & !take_branch_i)
-				begin
-					STATE <= S1;
-					mcause_buf[31] <= 1'b0;
-					mcause_buf[30:0] <= 31'd2;
-				end
-				else if(ecall_i & !take_branch_i)
-				begin
-					STATE <= S1;
-					mcause_buf[31] <= 1'b0;
-					mcause_buf[30:0] <= 31'd11;
-				end
-				else if(ebreak_i & !take_branch_i)
-				begin
-					STATE <= S1;
-					mcause_buf[31] <= 1'b0;
-					mcause_buf[30:0] <= 31'd3;
+					if(`mstatus_mie & `mie_meie & `mip_meip)
+					begin
+						STATE <= S1;
+						ack_o <= 1'b1;
+						mcause_buf[31] <= 1'b1;
+						mcause_buf[30:0] <= 31'd11;
+					end
+
+					else if(`mstatus_mie & `mie_msie & `mip_msip)
+					begin
+						STATE <= S1;
+						mcause_buf[31] <= 1'b1;
+						mcause_buf[30:0] <= 31'd3;		
+					end					
+					
+					else if(`mstatus_mie & `mie_mtie & `mip_mtip)
+					begin
+						STATE <= S1;
+						mcause_buf[31] <= 1'b1;
+						mcause_buf[30:0] <= 31'd7;					
+					end
+					else if(instr_addr_misaligned_i & !take_branch_i)
+					begin
+						STATE <= S1;
+						mcause_buf[31] <= 1'b0;
+						mcause_buf[30:0] <= 31'd0;						
+					end
+					else if(illegal_instr_i & !take_branch_i)
+					begin
+						STATE <= S1;
+						mcause_buf[31] <= 1'b0;
+						mcause_buf[30:0] <= 31'd2;
+					end
+					else if(ecall_i & !take_branch_i)
+					begin
+						STATE <= S1;
+						mcause_buf[31] <= 1'b0;
+						mcause_buf[30:0] <= 31'd11;
+					end
+					else if(ebreak_i & !take_branch_i)
+					begin
+						STATE <= S1;
+						mcause_buf[31] <= 1'b0;
+						mcause_buf[30:0] <= 31'd3;
+					end					
 				end
 			end
 			
@@ -194,7 +220,19 @@ begin
 	end
 end
 
-always @(negedge clk_i or negedge reset_i)
+always @(*)
+begin
+	index = 5'd15;
+	cond = 1'b0;
+	while(index != 5'd31 && cond != 1'b1)
+	begin
+		index = index + 5'd1;
+		cond = masked_irq[index];
+	end	
+end
+
+integer i;
+always @(posedge clk_i or negedge reset_i)
 begin
 	if(!reset_i)
 		mip <= 32'b0;
@@ -202,6 +240,15 @@ begin
 	begin
 		`mip_meip <= meip_i; //meip bit is set by the interrupt controller
 		`mip_mtip <= mtip_i; //timer interrupt bit
+		`mip_msip <= msip_i; //software interrupt bit
+
+		for (i = 16; i<32; i=i+1) 
+		begin
+			if(masked_irq[i] == 1'b1 && i == index)
+				mip[i] <= fast_irq_i[i-16];
+			else if(mip[i] == 1'b0)
+				mip[i] <= fast_irq_i[i-16];	
+		end
 	end
 end
 
@@ -240,6 +287,8 @@ begin
 			begin
 				`mie_meie <= csr_reg_i[11];
 				`mie_mtie <= csr_reg_i[7];
+				`mie_msie <= csr_reg_i[3];
+				mie[31:16] <= csr_reg_i[31:16];
 			end
 			
             else if(csr_w_addr_i[11:0] == 12'h305) //0x305 - mtvec

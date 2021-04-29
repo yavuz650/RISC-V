@@ -13,7 +13,9 @@ module core(input hreset_i, sreset_i,  //active-low resets. all write_enable sig
             input  [31:0] instr_i,      //instruction input
             output [31:0] instr_addr_o, //instruction address output
 
-            input  meip_i, mtip_i, //interrupts
+            input         meip_i, mtip_i, msip_i, //interrupts
+			input  [15:0] fast_irq_i,
+
             output irq_ack_o);     //interrupt acknowledge signal. driven high for one cycle when an external interrupt is handled.
             
 parameter reset_vector = 32'h0; //pc is set to this address when a reset occurs.
@@ -185,7 +187,9 @@ csr_unit CSR_UNIT(.clk_i(clk_i),
                   .csr_reg_i(imm_WB),
                   .csr_wen_i(csr_wen_WB), 
                   .meip_i(meip_i), 
-                  .mtip_i(mtip_i), 
+                  .mtip_i(mtip_i),
+				  .msip_i(msip_i),
+				  .fast_irq_i(fast_irq_i),
                   .take_branch_i(take_branch),
                   .mret_id_i(mret_ID), 
                   .mret_wb_i(mret_WB),
