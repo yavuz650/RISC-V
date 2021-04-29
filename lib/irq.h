@@ -4,7 +4,10 @@
 //interrupt routines for vectored mode.
 void mei_handler() __attribute__ (( interrupt ("machine")));
 void mti_handler() __attribute__ (( interrupt ("machine")));
+void msi_handler() __attribute__ (( interrupt ("machine")));
 void exc_handler() __attribute__ (( interrupt ("machine")));
+void fast_irq0_handler() __attribute__ (( interrupt ("machine")));
+void fast_irq1_handler() __attribute__ (( interrupt ("machine")));
 //trap handler for direct mode.
 void direct_trap_handler() __attribute__ (( interrupt ("machine")));
 
@@ -52,10 +55,23 @@ static inline void DISABLE_MEI()
     __asm__ volatile ("csrc mie,%[mask]" :: [mask] "r" (mask));
 }
 
+//enables fast interrupts by setting the associated bit in mie register.
+static inline void ENABLE_FAST_IRQ(int irq_index)
+{
+    int mask = 0x1 << (irq_index+16);
+    __asm__ volatile ("csrs mie,%[mask]" :: [mask] "r" (mask));
+}
+//disables fast interrupts by clearing the associated bit in mie register.
+static inline void DISABLE_FAST_IRQ(int irq_index)
+{
+    int mask = 0x1 << (irq_index+16);
+    __asm__ volatile ("csrc mie,%[mask]" :: [mask] "r" (mask));
+}
+
 __asm__("exc: j exc_handler\n");
 __asm__("ssi: nop\n");
 __asm__("hsi: nop\n");
-__asm__("msi: nop\n");
+__asm__("msi: j msi_handler\n");
 __asm__("uti: nop\n");
 __asm__("sti: nop\n");
 __asm__("hti: nop\n");
@@ -64,4 +80,10 @@ __asm__("uei: nop\n");
 __asm__("sei: nop\n");
 __asm__("hei: nop\n");
 __asm__("mei: j mei_handler\n");
+__asm__("nop\n");
+__asm__("nop\n");
+__asm__("nop\n");
+__asm__("nop\n");
+__asm__("fast_irq0: j fast_irq0_handler\n");
+__asm__("fast_irq1: j fast_irq1_handler\n");
 

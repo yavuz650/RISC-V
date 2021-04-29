@@ -19,7 +19,7 @@ int main()
     {
         uart_transmit_string(&uart0,"Send 16 bytes of input block!\n",30);
         ENABLE_GLOBAL_IRQ();
-        ENABLE_MEI();
+        ENABLE_FAST_IRQ(0);
         while(count!=16);
         AES_ECB_encrypt(&ctx, input_array);
         uart_transmit_string(&uart0,input_array,16);
@@ -29,12 +29,16 @@ int main()
 
 void mti_handler() {}
 void exc_handler() {}
-void mei_handler()
+void mei_handler() {}
+void msi_handler() {}
+void fast_irq0_handler()
 {
 	char *rx_ptr = (char*)(uart0.base_addr)+UART_RX_ADDR_OFFSET;
     char rx_byte = *rx_ptr;
     input_array[count]=rx_byte;
     count++;
     if(count == 16)
-        DISABLE_GLOBAL_IRQ();        
+        DISABLE_GLOBAL_IRQ();
 }
+
+void fast_irq1_handler() {}

@@ -3,6 +3,7 @@
 module barebones_top(input clk_i,
                      input reset_i,
                      input meip_i,
+                     input [15:0] fast_irq_i,
                      output irq_ack_o);
 				   
 wire [3:0] data_wmask;
@@ -49,6 +50,8 @@ core core0(.clk_i(clk_i),
            .sreset_i(1'b1),
            .meip_i(meip_i),
            .mtip_i(mtip_o),
+           .msip_i(1'b0),
+           .fast_irq_i(fast_irq_i),
            .instr_i(mem_instr_o),
            .data_i(core_data_i),
            .data_o(core_data_o),

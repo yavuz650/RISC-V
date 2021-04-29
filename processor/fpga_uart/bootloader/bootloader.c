@@ -13,15 +13,17 @@ int main()
     uart_transmit_string(&uart0,"Waiting for opcodes...\n",23);
 
     ENABLE_GLOBAL_IRQ();
-    ENABLE_MEI();
+    ENABLE_FAST_IRQ(0);
 
     while(1);
 }
 
-void mti_handler()
-{}
+void mti_handler() {}
+void mei_handler() {}
+void msi_handler() {}
+void exc_handler() {}
 
-void mei_handler()
+void fast_irq0_handler()
 {
     char *rx_ptr = (char*)(uart0.base_addr)+UART_RX_ADDR_OFFSET;
     char rx_byte = *rx_ptr;
@@ -29,4 +31,4 @@ void mei_handler()
     ram_index++;
 }
 
-void exc_handler() {}
+void fast_irq1_handler() {}
