@@ -15,7 +15,7 @@ The module utilizes a finite state machine to realize the task.
 `define mie_msie mie[3]
 `define mip_msip mip[3]
 
-module csr_unit(input clk_i, 
+module csr_unit(input clk_i,
                 input hreset_i, //hardware reset
                 input sreset_i, //software reset
                 input [31:0] pc_i,
@@ -43,12 +43,11 @@ module csr_unit(input clk_i,
                 output csr_if_flush_o, csr_id_flush_o, csr_ex_flush_o, csr_mem_flush_o);
 
 //state encoding
-parameter INIT = 0;
-parameter STAND_BY = 1;
-parameter S1 = 2;
+parameter STAND_BY = 0;
+parameter S1 = 1;
 
 //state register for the FSM
-reg [1:0] STATE;
+reg STATE;
 
 //CSR registers
 reg [31:0] mstatus, mie, mip, mcause, mtvec, mepc, mscratch;
@@ -68,18 +67,22 @@ wire csr_if_flush, csr_id_flush, csr_ex_flush, csr_mem_flush;
 //interrupt handler addresses for different interrupt handling modes
 wire [31:0] direct_mode_addr, vector_mode_addr;
 
+//Priority Encoder index
+reg [4:0] fast_irq_index;
+//Priority Encoder Valid output
+reg PE_valid;
+
 wire pending_irq, pending_exception;
 wire [31:0] masked_irq;
-reg [4:0] index;
-reg cond;
 
 assign reset_i = hreset_i & sreset_i;
 
 assign direct_mode_addr = mtvec;
 assign vector_mode_addr = mcause_buf[31] ? {mtvec[31:1],1'b0} + (mcause_buf << 2) : {mtvec[31:1],1'b0};
 
+assign masked_irq = mie & mip & {32{`mstatus_mie}};
 assign pending_exception = (illegal_instr_i | instr_addr_misaligned_i | ecall_i | ebreak_i) & ~take_branch_i;
-assign pending_irq = masked_irq != 32'b0; //(`mie_meie & `mip_meip) | (`mie_mtie & `mip_mtip);
+assign pending_irq = masked_irq != 32'b0;
 
 assign csr_if_flush = (`mstatus_mie & pending_irq) | (STATE == S1) | (mret_id_i & ~take_branch_i) | pending_exception;
 assign csr_id_flush = csr_ex_flush | (`mstatus_mie & pending_irq) | pending_exception;
@@ -99,38 +102,32 @@ assign csr_mem_flush_o = csr_mem_flush;
 
 assign mepc_o = mepc;
 
-assign masked_irq = mie & mip & {32{`mstatus_mie}};
-
 //state transitions are done on the rising edge
 always @(posedge clk_i or negedge reset_i)
 begin
 	if(!reset_i)
 	begin
-		STATE <= INIT;
+		STATE <= STAND_BY;
 		ack_o <= 1'b0;
 		mcause_buf <= 32'd0;
 	end
-	
+
 	else
 	begin
 		case(STATE)
-			INIT: 
-			begin
-				STATE <= STAND_BY;
-			end
-			
+
 			STAND_BY:
 			begin
-				if(masked_irq[31:16] != 16'b0)
+				if(masked_irq[31:16] != 16'b0) //fast interrupts have the highest priority
 				begin
 					STATE <= S1;
 					mcause_buf[31] <= 1'b1;
-					mcause_buf[30:0] <= index;			
+					mcause_buf[30:0] <= fast_irq_index;
 				end
 
 				else
 				begin
-					if(`mstatus_mie & `mie_meie & `mip_meip)
+					if(`mstatus_mie & `mie_meie & `mip_meip) //external interrupts have the second highest priority
 					begin
 						STATE <= S1;
 						ack_o <= 1'b1;
@@ -138,24 +135,24 @@ begin
 						mcause_buf[30:0] <= 31'd11;
 					end
 
-					else if(`mstatus_mie & `mie_msie & `mip_msip)
+					else if(`mstatus_mie & `mie_msie & `mip_msip) //software interrupts have the third highest priority
 					begin
 						STATE <= S1;
 						mcause_buf[31] <= 1'b1;
-						mcause_buf[30:0] <= 31'd3;		
-					end					
-					
-					else if(`mstatus_mie & `mie_mtie & `mip_mtip)
-					begin
-						STATE <= S1;
-						mcause_buf[31] <= 1'b1;
-						mcause_buf[30:0] <= 31'd7;					
+						mcause_buf[30:0] <= 31'd3;
 					end
-					else if(instr_addr_misaligned_i & !take_branch_i)
+
+					else if(`mstatus_mie & `mie_mtie & `mip_mtip) //timer interrupts have the fourth highest priority
+					begin
+						STATE <= S1;
+						mcause_buf[31] <= 1'b1;
+						mcause_buf[30:0] <= 31'd7;
+					end
+					else if(instr_addr_misaligned_i & !take_branch_i) //exceptions have the lowest priority
 					begin
 						STATE <= S1;
 						mcause_buf[31] <= 1'b0;
-						mcause_buf[30:0] <= 31'd0;						
+						mcause_buf[30:0] <= 31'd0;
 					end
 					else if(illegal_instr_i & !take_branch_i)
 					begin
@@ -174,15 +171,15 @@ begin
 						STATE <= S1;
 						mcause_buf[31] <= 1'b0;
 						mcause_buf[30:0] <= 31'd3;
-					end					
+					end
 				end
 			end
-			
+
 			S1:
 			begin
 				STATE <= STAND_BY;
 				ack_o <= 1'b0;
-			end			
+			end
 		endcase
 	end
 end
@@ -191,44 +188,45 @@ always @(posedge clk_i or negedge reset_i)
 begin
 	if(!reset_i)
 		csr_reg_o <= 32'b0;
-	
+
 	else
 	begin
 		if(csr_r_addr_i == 12'h300) //0x300 - mstatus
 			csr_reg_o <= mstatus;
-	
+
 		else if(csr_r_addr_i[11:0] == 12'h304) //0x304 - mie
 			csr_reg_o <= mie;
-			
+
 		else if(csr_r_addr_i[11:0] == 12'h305) //0x305 - mtvec
 			csr_reg_o <= mtvec;
-			
+
 		else if(csr_r_addr_i[11:0] == 12'h340) //0x340 - mscratch
 			csr_reg_o <= mscratch;
-				
+
 		else if(csr_r_addr_i[11:0] == 12'h341) //0x341 - mepc
 			csr_reg_o <= {mepc[31:2],2'b0};
-			
+
 		else if(csr_r_addr_i[11:0] == 12'h342) //0x342 - mcause
 			csr_reg_o <= mcause;
-			
+
 		else if(csr_r_addr_i[11:0] == 12'h344) //0x344 - mip
 			csr_reg_o <= mip;
-			
+
 		else
 			csr_reg_o <= 32'd0;
 	end
 end
 
+//Priority Encoder for fast interrupts.
 always @(*)
 begin
-	index = 5'd15;
-	cond = 1'b0;
-	while(index != 5'd31 && cond != 1'b1)
+	fast_irq_index = 5'd15;
+	PE_valid = 1'b0;
+	while(fast_irq_index != 5'd31 && PE_valid != 1'b1)
 	begin
-		index = index + 5'd1;
-		cond = masked_irq[index];
-	end	
+		fast_irq_index = fast_irq_index + 5'd1;
+		PE_valid = masked_irq[fast_irq_index];
+	end
 end
 
 integer i;
@@ -242,12 +240,12 @@ begin
 		`mip_mtip <= mtip_i; //timer interrupt bit
 		`mip_msip <= msip_i; //software interrupt bit
 
-		for (i = 16; i<32; i=i+1) 
+		for (i = 16; i<32; i=i+1)
 		begin
-			if(masked_irq[i] == 1'b1 && i == index)
+			if(masked_irq[i] == 1'b1 && i == fast_irq_index)
 				mip[i] <= fast_irq_i[i-16];
 			else if(mip[i] == 1'b0)
-				mip[i] <= fast_irq_i[i-16];	
+				mip[i] <= fast_irq_i[i-16];
 		end
 	end
 end
@@ -262,11 +260,11 @@ begin
 		mscratch <= 32'b0;
 		mtvec <= 32'b0;
 		//unused fields are hardwired to 0
-		mstatus[31:13] <= 19'b0; mstatus[10:0] <= 11'b0; 
-		//mstatus.mpp 
+		mstatus[31:13] <= 19'b0; mstatus[10:0] <= 11'b0;
+		//mstatus.mpp
 		mstatus[12:11] <= 2'b11;
 	end
-	
+
 	else
 	begin
 		if(!csr_wen_i)
@@ -274,15 +272,15 @@ begin
 			if(mret_wb_i)
 			begin
 				`mstatus_mie <= `mstatus_mpie;
-				`mstatus_mpie <= 1'b1;				
+				`mstatus_mpie <= 1'b1;
 			end
-			
+
 			else if(csr_w_addr_i[11:0] == 12'h300) //0x300 - mstatus
 			begin
 				`mstatus_mie <= csr_reg_i[3];
 				`mstatus_mpie <= csr_reg_i[7];
 			end
-			
+
 			else if(csr_w_addr_i[11:0] == 12'h304) //0x304 - mie
 			begin
 				`mie_meie <= csr_reg_i[11];
@@ -290,20 +288,20 @@ begin
 				`mie_msie <= csr_reg_i[3];
 				mie[31:16] <= csr_reg_i[31:16];
 			end
-			
+
             else if(csr_w_addr_i[11:0] == 12'h305) //0x305 - mtvec
             	mtvec <= csr_reg_i;
-			
+
 			else if(csr_w_addr_i[11:0] == 12'h340) //0x340 - mscratch
 				mscratch <= csr_reg_i;
-				
+
 			else if(csr_w_addr_i[11:0] == 12'h341) //0x341 - mepc
 				mepc <= csr_reg_i;
 		end
 
 		else
 		begin
-			case(STATE)	
+			case(STATE)
 				S1:
 				begin
 					mepc <= pc_i;
@@ -319,21 +317,21 @@ always @(negedge clk_i)
 begin
 	if(!hreset_i)
 		mcause <= 32'b0;
-		
+
 	else if(!sreset_i)
 		mcause <= 32'b1;
 	
 	else
 	begin
 		if(!csr_wen_i)
-		begin		
+		begin
 			if(csr_w_addr_i[11:0] == 12'h342) //0x342 - mcause
 				mcause <= csr_reg_i;
 		end
 
 		else
 		begin
-			case(STATE)	
+			case(STATE)
 				S1: mcause <= mcause_buf;
 			endcase
 		end
@@ -341,4 +339,3 @@ begin
 end
 
 endmodule
-
