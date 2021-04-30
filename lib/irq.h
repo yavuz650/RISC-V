@@ -2,31 +2,20 @@
 #define DISABLE_GLOBAL_IRQ() __asm__("csrci mstatus,0x8\n"); //disables interrupts globally by clearing the mie bit in mstatus register.
 
 //interrupt routines for vectored mode.
-void mei_handler() __attribute__ (( interrupt ("machine")));
-void mti_handler() __attribute__ (( interrupt ("machine")));
-void msi_handler() __attribute__ (( interrupt ("machine")));
-void exc_handler() __attribute__ (( interrupt ("machine")));
-void fast_irq0_handler() __attribute__ (( interrupt ("machine")));
-void fast_irq1_handler() __attribute__ (( interrupt ("machine")));
+void mei_handler() __attribute__ (( weak, interrupt ("machine")));
+void mti_handler() __attribute__ (( weak, interrupt ("machine")));
+void msi_handler() __attribute__ (( weak, interrupt ("machine")));
+void exc_handler() __attribute__ (( weak, interrupt ("machine")));
+void fast_irq0_handler() __attribute__ (( weak, interrupt ("machine")));
+void fast_irq1_handler() __attribute__ (( weak, interrupt ("machine")));
 //trap handler for direct mode.
-void direct_trap_handler() __attribute__ (( interrupt ("machine")));
+void direct_trap_handler() __attribute__ (( weak, interrupt ("machine")));
 
 //sets mtvec's value to the beginning of the vector table, and sets the LSB.
-static inline void SET_MTVEC_VECTOR_MODE()
-{
-    int base_addr;
-    __asm__ volatile ("la %[base_addr],exc" :[base_addr] "=r" (base_addr): );
-    base_addr |= 0x1; //vector mode
-    __asm__ volatile ("csrw mtvec,%[base_addr]" :: [base_addr] "r" (base_addr));
-}
+void SET_MTVEC_VECTOR_MODE();
 
 //sets mtvec's value to the address of the trap handler function.
-static inline void SET_MTVEC_DIRECT_MODE()
-{
-    int base_addr;
-    base_addr = &direct_trap_handler;
-    __asm__ volatile ("csrw mtvec,%[base_addr]" :: [base_addr] "r" (base_addr));
-}
+void SET_MTVEC_DIRECT_MODE();
 
 //enables machine level timer interrupts by setting the mtie bit in mie register.
 static inline void ENABLE_MTI()
@@ -67,23 +56,3 @@ static inline void DISABLE_FAST_IRQ(int irq_index)
     int mask = 0x1 << (irq_index+16);
     __asm__ volatile ("csrc mie,%[mask]" :: [mask] "r" (mask));
 }
-
-__asm__("exc: j exc_handler\n");
-__asm__("ssi: nop\n");
-__asm__("hsi: nop\n");
-__asm__("msi: j msi_handler\n");
-__asm__("uti: nop\n");
-__asm__("sti: nop\n");
-__asm__("hti: nop\n");
-__asm__("mti: j mti_handler\n");
-__asm__("uei: nop\n");
-__asm__("sei: nop\n");
-__asm__("hei: nop\n");
-__asm__("mei: j mei_handler\n");
-__asm__("nop\n");
-__asm__("nop\n");
-__asm__("nop\n");
-__asm__("nop\n");
-__asm__("fast_irq0: j fast_irq0_handler\n");
-__asm__("fast_irq1: j fast_irq1_handler\n");
-
