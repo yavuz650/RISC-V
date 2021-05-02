@@ -15,7 +15,7 @@ you can use the core.
 
 |<span style="font-size:1.5em;">Simplified Pipeline Diagram</span>
 |:---:
-|<img src="simplified_pipeline.png" width="964" height="587" />|
+|![Simplified Pipeline Diagram](/simplified_pipeline.png) |
 
 ## Troubleshooting, Bugs & Suggestions
 Feel free to create an issue on GitHub or send an e-mail.
