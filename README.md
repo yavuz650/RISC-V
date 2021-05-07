@@ -11,7 +11,7 @@ Hornet is a simple, fully open-source, FPGA-proven 32-bit RISC-V core.
 In this repo, in addition to the core itself, you can also find supporting peripherals, software and SoC examples to help you get started.
 
 We also provide a reference manual that explains how the core is designed and how it works, in detail; and a user manual that describes how
-you can use the core.
+you can use the core. (To be added soon...)
 
 |<span style="font-size:1.5em;">Simplified Pipeline Diagram</span>
 |:---:
