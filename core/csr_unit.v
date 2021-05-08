@@ -34,7 +34,7 @@ module csr_unit(input clk_i,
                 input mret_id_i,
                 input mret_wb_i,
                 input misaligned_ex,
-                input illegal_instr_i, instr_addr_misaligned_i, ecall_i, ebreak_i,
+                input instr_access_fault_i, illegal_instr_i, instr_addr_misaligned_i, ecall_i, ebreak_i, data_err_i,
 
                 output reg [31:0] csr_reg_o,
                 output [31:0] irq_addr_o, mepc_o,
@@ -87,7 +87,7 @@ assign pending_irq = masked_irq != 32'b0;
 assign csr_if_flush = (`mstatus_mie & pending_irq) | (STATE == S1) | (mret_id_i & ~take_branch_i) | pending_exception;
 assign csr_id_flush = csr_ex_flush | (`mstatus_mie & pending_irq) | pending_exception;
 assign csr_ex_flush = csr_mem_flush | (`mstatus_mie & pending_irq & !ex_dummy_i & !misaligned_ex) | instr_addr_misaligned_i;
-assign csr_mem_flush = `mstatus_mie & pending_irq & mem_wen_i & !mem_dummy_i;
+assign csr_mem_flush = (`mstatus_mie & pending_irq & mem_wen_i & !mem_dummy_i) | instr_access_fault_i;
 
 //outputs
 assign irq_addr_o = mtvec[0] ? vector_mode_addr : direct_mode_addr;
@@ -148,7 +148,13 @@ begin
 						mcause_buf[31] <= 1'b1;
 						mcause_buf[30:0] <= 31'd7;
 					end
-					else if(instr_addr_misaligned_i & !take_branch_i) //exceptions have the lowest priority
+					else if(instr_access_fault_i) //exceptions have the lowest priority
+					begin
+						STATE <= S1;
+						mcause_buf[31] <= 1'b0;
+						mcause_buf[30:0] <= 31'd1;
+					end					
+					else if(instr_addr_misaligned_i & !take_branch_i)
 					begin
 						STATE <= S1;
 						mcause_buf[31] <= 1'b0;
@@ -171,6 +177,18 @@ begin
 						STATE <= S1;
 						mcause_buf[31] <= 1'b0;
 						mcause_buf[30:0] <= 31'd3;
+					end
+					else if(data_err_i & !mem_wen_i) //store access fault
+					begin
+						STATE <= S1;
+						mcause_buf[31] <= 1'b0;
+						mcause_buf[30:0] <= 31'd7;
+					end
+					else if(data_err_i & mem_wen_i) //load access fault
+					begin
+						STATE <= S1;
+						mcause_buf[31] <= 1'b0;
+						mcause_buf[30:0] <= 31'd5;					
 					end
 				end
 			end

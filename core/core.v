@@ -9,12 +9,15 @@ module core(input hreset_i, sreset_i,  //active-low resets. all write_enable sig
             output        data_wen_o,   //data memory write enable output
             output [31:0] data_addr_o,  //data memory address output
             output [31:0] data_o,       //data memory data output
+            output        data_req_o,   //data access request output. driven high when a store/load is carried out
+            input         data_err_i,   //data access error input. this will trigger a store/load access fault.
 		
             input  [31:0] instr_i,      //instruction input
             output [31:0] instr_addr_o, //instruction address output
+            input         instr_access_fault_i, //instruction access fault exception signal
 
             input         meip_i, mtip_i, msip_i, //interrupts
-			input  [15:0] fast_irq_i,
+            input  [15:0] fast_irq_i,
 
             output irq_ack_o);     //interrupt acknowledge signal. driven high for one cycle when an external interrupt is handled.
             
@@ -106,6 +109,7 @@ wire        hazard_stall; //output of the hazard detection unit.
 wire [31:0] branch_target_addr; //branch target address, calculated in EX stage.
 wire [31:0] branch_addr_calc; //intermediate value during address calculation.
 wire        take_branch; //branch decision signal. 1 if the branch is taken, 0 otherwise.
+
 //pipeline registers
 reg [31:0] EXMEM_preg_imm;
 reg [4:0]  EXMEM_preg_rd;
@@ -188,12 +192,14 @@ csr_unit CSR_UNIT(.clk_i(clk_i),
                   .csr_wen_i(csr_wen_WB), 
                   .meip_i(meip_i), 
                   .mtip_i(mtip_i),
-				  .msip_i(msip_i),
-				  .fast_irq_i(fast_irq_i),
+                  .msip_i(msip_i),
+                  .fast_irq_i(fast_irq_i),
                   .take_branch_i(take_branch),
                   .mret_id_i(mret_ID), 
                   .mret_wb_i(mret_WB),
                   .misaligned_ex(IDEX_preg_misaligned),
+                  .instr_access_fault_i(instr_access_fault_i),
+                  .data_err_i(data_err_i),
 
                   .csr_reg_o(csr_reg_out), 
                   .mepc_o(mepc),
@@ -435,6 +441,8 @@ assign mux7_ctrl_EX = ex_EX[12];
 assign J            = ex_EX[13]; //jump
 assign B            = ex_EX[14]; //branch
 assign L            = (!wb_EX[3] && wb_EX[6:5] == 2'b1) ? 1'b1 : 1'b0; //load
+assign mem_wen_EX   = csr_ex_flush ? 1'b1 : mem_EX[0];
+assign mem_length_EX = mem_EX[2:1];
 //muxes
 assign mux1_o_EX = mux1_ctrl_EX == 2'b10 ? mux8_o_EX
                  : mux1_ctrl_EX == 2'b01 ? pc_EX 
@@ -522,7 +530,7 @@ begin
 		EXMEM_preg_pc <= pc_EX;
 		EXMEM_preg_data2 <= mux4_o_EX;
 		EXMEM_preg_aluout <= mux6_o_EX;
-		EXMEM_preg_mem <= mem_EX;
+		EXMEM_preg_mem <= {mem_EX[2:1],mem_wen_EX};
 		EXMEM_preg_wb[6:4] <= wb_EX[6:4];
 		EXMEM_preg_wb[3] <= misaligned_access ? 1'b1 : wb_EX[3];
 		EXMEM_preg_wb[2:0] <= wb_EX[2:0];
@@ -538,9 +546,9 @@ end
 
 load_store_unit LS_UNIT (.addr_i(aluout_EX),
                          .data_i(mux4_o_EX),
-                         .length_EX_i(mem_EX[2:1]),
+                         .length_EX_i(mem_length_EX),
                          .load_i(L),
-                         .wen_i(mem_EX[0]),
+                         .wen_i(mem_wen_EX),
                          .misaligned_EX_i(IDEX_preg_misaligned), 
                          .misaligned_MEM_i(EXMEM_preg_misaligned),
                          .read_data_i(data_i),
@@ -552,8 +560,9 @@ load_store_unit LS_UNIT (.addr_i(aluout_EX),
                          .wmask_o(data_wmask_o),
                          .misaligned_access_o(misaligned_access),
                          .memout_o(memout));
-                         
-assign data_wen_o  = csr_ex_flush ? 1'b1 : mem_EX[0];
+
+assign data_req_o = L | ~mem_wen_EX; //driven high if there's a load or a store.
+assign data_wen_o  = mem_wen_EX;
 //MEM STAGE---------------------------------------------------------------------------------
 assign wb_MEM 	    = EXMEM_preg_wb;
 assign mem_MEM 	    = EXMEM_preg_mem;

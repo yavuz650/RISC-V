@@ -28,7 +28,7 @@ assign misaligned_access_o = (load_i | ~wen_i) & ~misaligned_EX_i & addr_misalig
 
 //outputs to memory
 assign addr_o = misaligned_EX_i ? {addr_i[31:2],2'b0} + 32'd4 : {addr_i[31:2],2'b0};
-                   
+
 always @(*)
 begin
 	if(!misaligned_EX_i)
