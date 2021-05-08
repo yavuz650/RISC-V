@@ -5,3 +5,4 @@ build:
 	riscv32-unknown-elf-gcc aes_test.c aes.c ../crt0.s $(CCFLAGS)
 	$(CC)-objcopy -O binary -j .init -j .text -j .rodata aes_test.elf aes_test.bin
 	../rom_generator aes_test.bin
+	cp aes_test.data ../memory_contents

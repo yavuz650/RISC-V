@@ -5,3 +5,4 @@ build:
 	riscv32-unknown-elf-gcc soft_float.c ../crt0.s $(CCFLAGS)
 	$(CC)-objcopy -O binary -j .init -j .text -j .rodata -j .sdata soft_float.elf soft_float.bin
 	../rom_generator soft_float.bin
+	cp soft_float.data ../memory_contents

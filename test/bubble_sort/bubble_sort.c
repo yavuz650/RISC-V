@@ -1,5 +1,3 @@
-//#include <stdio.h>
-
 void sorter(int* arr, int len)
 {
     int sort_num;
@@ -24,10 +22,5 @@ int main()
 {
     int myarr[] = {195,14,176,103,54,32,128};
     sorter(myarr,7);
-    /*for(int i=0;i<5;i++)
-    {
-        printf("%d ",*(myarr+i));
-    }
-    printf("\n");*/
     return 0;
 }
