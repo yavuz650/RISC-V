@@ -49,7 +49,7 @@ parameter S1 = 1;
 //state register for the FSM
 reg STATE;
 
-//CSR registers
+//CSRs
 reg [31:0] mstatus, mie, mip, mcause, mtvec, mepc, mscratch;
 
 //buffer for mcause register. when a trap occurs, the associated mcause value is written to this register
