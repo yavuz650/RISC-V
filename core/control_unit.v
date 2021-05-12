@@ -247,10 +247,11 @@ begin
 			J = 1'b0; 
 			EX_mux5 = 1'b0; 
 			EX_mux6 = 1'b1; 
-			
+			EX_mux7 = 1'b0;
+
 			case(funct3[2])
-				1'b0: begin EX_mux1 = data1_EX; EX_mux3 = 2'd2; EX_mux7 = 1'b0; end //register
-				1'b1: begin EX_mux1 = 2'd2; EX_mux3 = imm_EX; EX_mux7 = 1'b1; end //immediate
+				1'b0: begin EX_mux1 = data1_EX; EX_mux3 = 2'd2; end //register
+				1'b1: begin EX_mux1 = 2'd2; EX_mux3 = imm_EX; end //immediate
 			endcase
 			
 			casez(funct3)
@@ -272,7 +273,7 @@ begin
 			MEM_len = 2'b0;
 			WB_mux = 2'b0;
 			WB_sign = 1'b0;
-			{MEM_wen,WB_rf_wen,WB_csr_wen} = 3'b1;
+			{MEM_wen,WB_rf_wen,WB_csr_wen} = 3'b111;
 		end
 
 	endcase
