@@ -244,7 +244,7 @@ begin
 		IFID_preg_dummy <= 1'b0;
 	end
 	
-	else if(take_branch | csr_if_flush) //branch taken. next address comes from the address calculation output.
+	else if(take_branch | csr_if_flush) //flush IF
 	begin
 		{IFID_preg_pc, IFID_preg_instr} <= 64'h13;
 		pc_o <= pc_i;
@@ -260,6 +260,10 @@ begin
 			IFID_preg_dummy <= 1'b0;
 			pc_o <= pc_i;
 		end
+		/*
+		else
+			IFID_preg_dummy <= 1'b1;
+		*/
 	end
 end
 //END IF STAGE-----------------------------------------------------------------------------

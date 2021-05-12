@@ -74,7 +74,7 @@ begin
 		begin 
 			WB_rf_wen = 1'b0; 
 			WB_csr_wen = 1'b1; 
-			WB_mux = aluout_MEM; 
+			WB_mux = imm_MEM; 
 			WB_sign = 1'b0; 
 			MEM_len = 2'b0; 
 			MEM_wen = 1'b1; 
@@ -94,7 +94,7 @@ begin
 		begin 
 			WB_rf_wen = 1'b0; 
 			WB_csr_wen = 1'b1; 
-			WB_mux = imm_MEM; 
+			WB_mux = aluout_MEM; 
 			WB_sign = 1'b0; 
 			MEM_len = 2'b0; 
 			MEM_wen = 1'b1; 
