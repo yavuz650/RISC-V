@@ -153,7 +153,7 @@ begin
 						STATE <= S1;
 						mcause_buf[31] <= 1'b0;
 						mcause_buf[30:0] <= 31'd1;
-					end					
+					end
 					else if(instr_addr_misaligned_i & !take_branch_i)
 					begin
 						STATE <= S1;
@@ -188,7 +188,7 @@ begin
 					begin
 						STATE <= S1;
 						mcause_buf[31] <= 1'b0;
-						mcause_buf[30:0] <= 31'd5;					
+						mcause_buf[30:0] <= 31'd5;
 					end
 				end
 			end
@@ -307,8 +307,8 @@ begin
 				mie[31:16] <= csr_reg_i[31:16];
 			end
 
-            else if(csr_w_addr_i[11:0] == 12'h305) //0x305 - mtvec
-            	mtvec <= csr_reg_i;
+			else if(csr_w_addr_i[11:0] == 12'h305) //0x305 - mtvec
+				mtvec <= csr_reg_i;
 
 			else if(csr_w_addr_i[11:0] == 12'h340) //0x340 - mscratch
 				mscratch <= csr_reg_i;
@@ -338,7 +338,7 @@ begin
 
 	else if(!sreset_i)
 		mcause <= 32'b1;
-	
+
 	else
 	begin
 		if(!csr_wen_i)
