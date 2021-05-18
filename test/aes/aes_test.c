@@ -3,6 +3,7 @@
 #include <stdint.h>
 #define ECB 1
 #include "aes.h"
+#define DEBUG_IF_ADDR 0x00002010
 
 static int test_encrypt_ecb(void);
 
@@ -36,13 +37,17 @@ static int test_encrypt_ecb(void)
     AES_init_ctx(&ctx, key);
     AES_ECB_encrypt(&ctx, in);
 
-
+    int *addr_ptr = DEBUG_IF_ADDR;
     if (0 == memcmp((char*) out, (char*) in, 16)) 
     {
-	    return(0);
+        //success
+        *addr_ptr = 1;
     } 
     else 
     {
-	    return(1);
+        //failure
+        *addr_ptr = 0;
     }
+
+    return 0;
 }
