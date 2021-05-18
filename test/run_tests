@@ -1,0 +1,25 @@
+#!/bin/sh
+
+#Run bubble sort
+echo "Testing bubble sort..."
+cd bubble_sort
+./bubble_sort_script
+cd ..
+#Run bubble sort with interrupts
+echo "Testing bubble sort with interrupts..."
+cd bubble_sort_irq
+./bubble_sort_irq_script
+cd ..
+#Run AES encryption test
+echo "Testing AES encryption..."
+cd aes
+./aes_test_script
+cd ..
+#Run soft float test
+echo "Testing soft float..."
+cd soft_float
+./soft_float_script
+cd ..
+
+#Done testing
+echo "Finished tests."

@@ -1,0 +1,7 @@
+#!/bin/sh
+
+MODULES="../../processor/barebones/barebones_top.v"
+verilator --cc --trace --exe bubble_sort_wrapper.cpp $MODULES -I../../core/ -I../../peripherals/
+cd obj_dir
+make -s -f Vbarebones_top.mk
+./Vbarebones_top
