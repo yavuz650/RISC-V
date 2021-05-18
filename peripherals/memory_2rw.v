@@ -28,8 +28,7 @@ module memory_2rw(
   output reg [DATA_WIDTH-1:0] dout1;
 
 
-reg [DATA_WIDTH-1:0]    mem [0:RAM_DEPTH-1];
-
+reg [DATA_WIDTH-1:0]    mem [0:RAM_DEPTH-1] /*verilator public*/;
   // Memory Write Block Port 0
   // Write Operation : When web0 = 0, csb0 = 0
   always @ (posedge clk0)
