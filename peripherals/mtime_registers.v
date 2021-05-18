@@ -80,24 +80,24 @@ end
 always @(*)
 begin
 	if(byte_addr[3][3]) //mtimecmp
-		data_o[31:24] <= mtimecmp[8*byte_addr[3][2:0] +: 8];
+		data_o[31:24] = mtimecmp[8*byte_addr[3][2:0] +: 8];
 	else
-		data_o[31:24] <= mtime[8*byte_addr[3][2:0] +: 8];
+		data_o[31:24] = mtime[8*byte_addr[3][2:0] +: 8];
 		
 	if(byte_addr[2][3]) //mtimecmp
-		data_o[23:16] <= mtimecmp[8*byte_addr[2][2:0] +: 8];
+		data_o[23:16] = mtimecmp[8*byte_addr[2][2:0] +: 8];
 	else
-		data_o[23:16] <= mtime[8*byte_addr[2][2:0] +: 8];
+		data_o[23:16] = mtime[8*byte_addr[2][2:0] +: 8];
 			
 	if(byte_addr[1][3]) //mtimecmp
-		data_o[15:8] <= mtimecmp[8*byte_addr[1][2:0] +: 8];
+		data_o[15:8] = mtimecmp[8*byte_addr[1][2:0] +: 8];
 	else
-		data_o[15:8] <= mtime[8*byte_addr[1][2:0] +: 8];
+		data_o[15:8] = mtime[8*byte_addr[1][2:0] +: 8];
 		
 	if(byte_addr[0][3]) //mtimecmp
-		data_o[7:0] <= mtimecmp[8*byte_addr[0][2:0] +: 8];
+		data_o[7:0] = mtimecmp[8*byte_addr[0][2:0] +: 8];
 	else
-		data_o[7:0] <= mtime[8*byte_addr[0][2:0] +: 8];
+		data_o[7:0] = mtime[8*byte_addr[0][2:0] +: 8];
 end
 
 assign e_h = mtime[63:32] == mtimecmp[63:32];
