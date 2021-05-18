@@ -41,7 +41,11 @@ int main(int argc, char** argv)
         tfp->dump(main_time);
         main_time++;
         if(main_time > 150000)
-        	break;
+        {
+            std::cout << "Failure - Time out..."
+            break;
+        }
+        	
     }
 
     barebones_top->final();
