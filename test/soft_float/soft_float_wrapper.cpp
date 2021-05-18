@@ -43,7 +43,7 @@ int main(int argc, char** argv)
         main_time++;
         if(main_time > 150000)
         {
-            std::cout << "Failure - Time out..."
+            std::cout << "Failure - Time out...\n";
             break;
         }
     }
