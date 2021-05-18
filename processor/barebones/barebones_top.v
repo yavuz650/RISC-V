@@ -45,10 +45,12 @@ wire ram_csb; //Read-Write region of memory
 wire rom_csb; //Read-only region of memory
 wire mem_csb; //Combination of RAM and ROM regions
 wire mtime_csb; //Timer registers
+wire debug_if_csb; //Debug interface 
 reg ram_csb_reg;
 reg rom_csb_reg;
 reg mem_csb_reg;
 reg mtime_csb_reg;
+reg debug_if_csb_reg;
 
 //timer interrupt signal
 wire mtip;
@@ -63,7 +65,9 @@ assign rom_csb = !((core_data_addr[31:13] == 19'b0) & (core_data_addr[12:9] != 4
 assign ram_csb = !((core_data_addr[31:13] == 19'b0) & (core_data_addr[12:9] == 4'hf)) | !reset_i;
 assign mem_csb = ram_csb & rom_csb;
 //0x0000_2000 to 0x0000_200F is mtime and mtimecmp, in order.
-assign mtime_csb = !(core_data_addr[31:4] == 27'h200) | !reset_i;
+assign mtime_csb = !(core_data_addr[31:4] == 28'h200) | !reset_i;
+//0x0000_2010 is debug interface
+assign debug_if_csb = !(core_data_addr == 32'h0000_2010);
 
 //if the instruction address falls outside of ROM, then the instruction access failed.
 assign core_instr_access_fault = !((core_instr_addr_reg[31:13] == 19'b0) & (core_instr_addr_reg[12:9] != 4'hf));
@@ -96,6 +100,7 @@ begin
         rom_csb_reg <= 1'b1;
         ram_csb_reg <= 1'b1;
         mem_csb_reg <= 1'b1;
+        debug_if_csb_reg <= 1'b1;
         mtime_csb_reg <= 1'b1;
         masked_wen_reg <= 1'b1;
     end
@@ -111,6 +116,7 @@ begin
         rom_csb_reg <= rom_csb;
         ram_csb_reg <= ram_csb;
         mem_csb_reg <= mem_csb;
+        debug_if_csb_reg <= debug_if_csb;
         mtime_csb_reg <= mtime_csb;
         masked_wen_reg <= masked_wen;
 	end
@@ -162,5 +168,10 @@ mtime_registers mtime0(.reset_i(reset_i),
                        .wmask_i(core_data_wmask_reg),
                        .mtip_o(mtip),
                        .data_o(mtime_data_out));
+
+debug_interface debug_if(.reset_i(reset_i),
+                         .csb_i(debug_if_csb_reg),
+                         .data_i(core_data_out_reg),      //data memory input
+                         .data_wen_i(core_data_wen_reg)); //data memory write enable output
 
 endmodule
