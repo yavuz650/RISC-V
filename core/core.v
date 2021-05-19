@@ -403,16 +403,15 @@ begin
 
 	else if(muldiv_stall_EX)
 	begin
-	    IDEX_preg_wb <= IDEX_preg_wb;
-		IDEX_preg_mem <= IDEX_preg_mem;
-		IDEX_preg_csr_addr <= IDEX_preg_csr_addr;
-		IDEX_preg_ex <= IDEX_preg_ex;
-		{IDEX_preg_pc, IDEX_preg_data1, IDEX_preg_data2} <= {IDEX_preg_pc, IDEX_preg_data1, IDEX_preg_data2};
-		{IDEX_preg_rs1, IDEX_preg_rs2, IDEX_preg_rd} <= {IDEX_preg_rs1, IDEX_preg_rs2, IDEX_preg_rd};
-		IDEX_preg_imm  <= IDEX_preg_imm;
-		IDEX_preg_dummy <= IDEX_preg_dummy;
-		IDEX_preg_mret <= IDEX_preg_mret;
-		IDEX_preg_misaligned <= IDEX_preg_misaligned;
+		if(IDEX_preg_rs1 == 5'b0)
+			IDEX_preg_data1 <= 32'b0;
+		else
+			IDEX_preg_data1 <= register_bank[IDEX_preg_rs1];
+
+		if(IDEX_preg_rs2 == 5'b0)
+			IDEX_preg_data2 <= 32'b0;
+		else
+			IDEX_preg_data2 <= register_bank[IDEX_preg_rs2];
 	end
 
 	else

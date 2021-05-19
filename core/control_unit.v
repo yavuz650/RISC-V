@@ -6,7 +6,7 @@ This module is responsible for generating the necessary control signals for the 
 `timescale 1ns/1ps
 
 module control_unit(input [31:0] instr_i,
-                    
+
                     output reg muldiv_start,
                     output reg muldiv_sel,
                     output reg [1:0] op_mul,
@@ -56,7 +56,7 @@ begin
         op_mul = 2'b00;
         op_div = 2'b00;
     end
-    
+
 end
 
 always @*
@@ -220,7 +220,10 @@ begin
 			B = 1'b0;
 			J = 1'b0;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 2'b00;
+			case(funct7)
+				7'd1: EX_mux6 = 2'b10;
+				default: EX_mux6 = 2'b00;
+			endcase
 			EX_mux5 = 1'b0;
 			EX_mux1 = data1_EX;
 
