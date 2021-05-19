@@ -44,9 +44,9 @@ assign funct7 = instr_i[31:25];
 
 always @*
 begin
-    if(opcode == 7'b00100_00) begin
+    if(opcode == 7'b01100_11 && funct7 == 7'd1) begin
         muldiv_start = 1'b1;
-        muldiv_sel = funct7[0];
+        muldiv_sel = funct3[2];
         op_mul = funct3[1:0];
         op_div = funct3[1:0];
     end
@@ -346,8 +346,12 @@ begin
 			case(opcode[5])
 				1'b1:
 				begin
-					if(funct3 == 3'd0 || funct3 == 3'd5)
+					if(funct7 == 7'd1)
+						illegal_instr = 1'b0;
+
+					else if(funct3 == 3'd0 || funct3 == 3'd5)
 						illegal_instr = {funct7[6],funct7[4:0]} != 6'd0;
+
 					else
 						illegal_instr = funct7 != 7'd0;
 				end
