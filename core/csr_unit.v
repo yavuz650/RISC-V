@@ -122,7 +122,7 @@ begin
 				begin
 					STATE <= S1;
 					mcause_buf[31] <= 1'b1;
-					mcause_buf[30:0] <= {26'b0,fast_irq_index};
+					mcause_buf[30:0] <= fast_irq_index;
 				end
 
 				else
@@ -260,7 +260,7 @@ begin
 
 		for (i = 16; i<32; i=i+1)
 		begin
-			if(masked_irq[i] == 1'b1 && i == {27'b0,fast_irq_index})
+			if(masked_irq[i] == 1'b1 && i == fast_irq_index)
 				mip[i] <= fast_irq_i[i-16];
 			else if(mip[i] == 1'b0)
 				mip[i] <= fast_irq_i[i-16];
