@@ -58,8 +58,8 @@ module MULDIV_top (
         
         else begin
             if(reg_AB_en) begin
-                reg_AB[31:0] = out_B;
-                reg_AB[63:32] = out_A;
+                reg_AB[31:0] <= out_B;
+                reg_AB[63:32] <= out_A;
             end
     
             if(reg_muldiv_en) 

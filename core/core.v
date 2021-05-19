@@ -490,7 +490,7 @@ assign alu_func2    = ex_EX[5:4];
 assign mux1_ctrl_EX = ex_EX[7:6];
 assign mux3_ctrl_EX = ex_EX[9:8];
 assign mux5_ctrl_EX = ex_EX[10];
-assign mux6_ctrl_EX = ex_EX[12:1];
+assign mux6_ctrl_EX = ex_EX[12:11];
 assign mux7_ctrl_EX = ex_EX[13];
 assign J            = ex_EX[14]; //jump
 assign B            = ex_EX[15]; //branch
@@ -647,7 +647,7 @@ assign rd_MEM 	    = EXMEM_preg_rd;
 assign pc_MEM       = EXMEM_preg_pc;
 assign imm_MEM 	    = EXMEM_preg_imm;
 assign csr_addr_MEM = EXMEM_preg_csr_addr;
-assign addr_bits    = EXMEM_preg_addr_bits;
+assign addr_bits_MEM = EXMEM_preg_addr_bits;
 
 always @(posedge clk_i or negedge reset_i)
 begin
@@ -709,33 +709,33 @@ assign mux_ctrl_WB = wb_WB[6:5];
 always @(*)
 begin
 	if(!reset_i)
-		mux_o_WB <= 32'b0;
+		mux_o_WB = 32'b0;
 		
 	else if(mux_ctrl_WB == 2'b0)
-		mux_o_WB <= aluout_WB;
+		mux_o_WB = aluout_WB;
 			
 	else if(mux_ctrl_WB == 2'b1) //load instruction
 	begin
 		if(mem_length_WB == 2'b0)
 		begin
-			if(load_sign == 2'b1) //signed load, perform sign extension
-				mux_o_WB <= { {24{memout_WB[7]}}, memout_WB[7:0] };
+			if(load_sign == 1'b1) //signed load, perform sign extension
+				mux_o_WB = { {24{memout_WB[7]}}, memout_WB[7:0] };
 			else
-				mux_o_WB <= { 24'b0, memout_WB[7:0] };
+				mux_o_WB = { 24'b0, memout_WB[7:0] };
 		end
 		else if(mem_length_WB == 2'b1)
 		begin
-			if(load_sign == 2'b1) //signed load, perform sign extension
-				mux_o_WB <= { {16{memout_WB[15]}}, memout_WB[15:0] };
+			if(load_sign == 1'b1) //signed load, perform sign extension
+				mux_o_WB = { {16{memout_WB[15]}}, memout_WB[15:0] };
 			else
-				mux_o_WB <= { 16'b0, memout_WB[15:0] };			
+				mux_o_WB = { 16'b0, memout_WB[15:0] };			
 		end
 		else
-			mux_o_WB <= { memout_WB };	
+			mux_o_WB = { memout_WB };	
 		end
 	
 	else
-		mux_o_WB <= imm_WB;
+		mux_o_WB = imm_WB;
 end
 
 //END WB STAGE-----------------------------------------------------------------------------
