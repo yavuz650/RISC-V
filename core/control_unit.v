@@ -6,7 +6,7 @@ This module is responsible for generating the necessary control signals for the 
 `timescale 1ns/1ps
 
 module control_unit(input [31:0] instr_i,
-                    
+
                     output reg muldiv_start,
                     output reg muldiv_sel,
                     output reg [1:0] op_mul,
@@ -44,9 +44,9 @@ assign funct7 = instr_i[31:25];
 
 always @*
 begin
-    if(opcode == 7'b00100_00) begin
+    if(opcode == 7'b01100_11 && funct7 == 7'd1) begin
         muldiv_start = 1'b1;
-        muldiv_sel = funct7[0];
+        muldiv_sel = funct3[2];
         op_mul = funct3[1:0];
         op_div = funct3[1:0];
     end
@@ -56,7 +56,7 @@ begin
         op_mul = 2'b00;
         op_div = 2'b00;
     end
-    
+
 end
 
 always @*
@@ -220,7 +220,10 @@ begin
 			B = 1'b0;
 			J = 1'b0;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 2'b00;
+			case(funct7)
+				7'd1: EX_mux6 = 2'b10;
+				default: EX_mux6 = 2'b00;
+			endcase
 			EX_mux5 = 1'b0;
 			EX_mux1 = data1_EX;
 
@@ -346,8 +349,12 @@ begin
 			case(opcode[5])
 				1'b1:
 				begin
-					if(funct3 == 3'd0 || funct3 == 3'd5)
+					if(funct7 == 7'd1)
+						illegal_instr = 1'b0;
+
+					else if(funct3 == 3'd0 || funct3 == 3'd5)
 						illegal_instr = {funct7[6],funct7[4:0]} != 6'd0;
+
 					else
 						illegal_instr = funct7 != 7'd0;
 				end

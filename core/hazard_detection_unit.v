@@ -22,7 +22,7 @@ assign uses_rs1 = opcode[4:1] == 4'b1100 || //JALR and branch instructions
                   opcode[4:0] == 5'b01000 || //store instructions
                   opcode[4:0] == 5'b00100 || //register-immediate arithmetic
                   opcode[4:0] == 5'b01100 || //register-register arithmetic
-                  (opcode[4:0] == 5'b11100 && funct3 != 3'b0); //CSR instructions
+                  (opcode[4:0] == 5'b11100 && funct3 == 1'b0); //CSR instructions
 
 assign uses_rs2 = opcode[4:0] == 5'b11000 || //branch instructions
                   opcode[4:0] == 5'b01000 || //store instructions
@@ -32,14 +32,14 @@ begin
 	if(L_EX)
 	begin
 		if((rs1 == rd_EX && uses_rs1) || (rs2 == rd_EX && uses_rs2))
-			hazard_stall <= 1'b1;
+			hazard_stall = 1'b1;
 
 		else
-			hazard_stall <= 1'b0;
+			hazard_stall = 1'b0;
 	end
 	else
 	begin
-		hazard_stall <= 1'b0;
+		hazard_stall = 1'b0;
 	end
 end
 
