@@ -1,0 +1,7 @@
+#!/bin/sh
+
+MODULES="../../processor/barebones/barebones_top.v"
+verilator --cc --trace --trace-max-width 3000 --trace-max-array 3000 --exe direct_mode_wrapper.cpp $MODULES -I../../core/ -I../../peripherals/
+cd obj_dir
+make -s -f Vbarebones_top.mk
+./Vbarebones_top

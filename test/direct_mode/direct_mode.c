@@ -1,9 +1,11 @@
 #include "../../lib/irq.h"
+#include "string.h"
 #define MTIME_ADDR 0x00002000
 #define MTIMECMP_ADDR 0x000002008
+#define DEBUG_IF_ADDR 0x00002010
 int dum;
 
-void sorter(int* arr, int len)
+void bubble_sort(int* arr, int len)
 {
     int sort_num;
     do
@@ -31,8 +33,23 @@ int main()
     ENABLE_GLOBAL_IRQ();
     ENABLE_MTI();
     ENABLE_MEI();
-    int myarr[] = {195,14,176,103,54,32,128};
-    sorter(myarr,7);
+    int unsorted_arr[] = {195,14,176,103,54,32,128};
+    int sorted_arr[] = {14,32,54,103,128,176,195};
+    bubble_sort(unsorted_arr,7);
+
+    int *addr_ptr = DEBUG_IF_ADDR;
+    if(!memcmp((char*) sorted_arr, (char*) unsorted_arr, 7))
+    {
+        if(dum == 27)
+            *addr_ptr = 1; //success
+        else
+            *addr_ptr = 0; //failure
+    }
+    else
+    {
+        //failure
+        *addr_ptr = 0;
+    }
     return 0;
 }
 
@@ -44,7 +61,7 @@ void mei_handler_direct()
 void mti_handler_direct()
 {
     dum++;
-    if(dum == 7)
+    if(dum == 30)
         DISABLE_MTI();
         
     int *mtime_addr_ptr = MTIME_ADDR;
@@ -68,11 +85,3 @@ void direct_trap_handler()
     }
 }
 
-void mti_handler()
-{}
-
-void mei_handler()
-{}
-
-void exc_handler() 
-{}
