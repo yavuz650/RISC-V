@@ -23,7 +23,7 @@ module MULDIV_ctrl (
     output reg muldiv_done   
 	);
 	
-
+    wire Am1, Bm1, A0, B0, A1, B1;
     parameter IDLE = 3'd0, DIV = 3'd1, DIV_out = 3'd2, 
     MUL1 = 3'd3, MUL2 = 3'd4, MUL_out = 3'd5;
 
@@ -176,7 +176,7 @@ begin
             if(muldiv_sel == 1'b0)                            
                 fastres = 32'd0;                           
             else begin
-                if (op_div == 1'b0)
+                if (op_div1 == 1'b0)
                     fastres = 32'hffffffff;
                 else 
                     fastres = A;

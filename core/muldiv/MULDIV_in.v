@@ -9,7 +9,7 @@ module MULDIV_in(
     output [5:0] AB_status,
     output [31:0] out_A,
     output [31:0] out_B,
-    output [31:0] out_A_2C
+    output [31:0] out_A_2C,
 	output [31:0] out_B_2C
 	);
     
