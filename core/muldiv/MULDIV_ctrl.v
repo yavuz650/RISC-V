@@ -8,10 +8,11 @@ module MULDIV_ctrl (
     input [5:0] AB_status,
     input div_rdy,
     input [1:0] op_mul,
-    input op_div, 
+    input op_div1, 
     input [31:0] A,
     input [31:0] B,
     input [31:0] A_2C,
+	input [31:0] B_2C,
     output reg div_start,  
     output reg reg_AB_en,
     output reg reg_muldiv_en,
@@ -22,7 +23,6 @@ module MULDIV_ctrl (
     output reg muldiv_done   
 	);
 	
-	wire Am1, Bm1, A0, B0, A1, B1;
 
     parameter IDLE = 3'd0, DIV = 3'd1, DIV_out = 3'd2, 
     MUL1 = 3'd3, MUL2 = 3'd4, MUL_out = 3'd5;
@@ -46,13 +46,13 @@ always @*
 begin
     case(AB_status)                   
         // A = 0 cases                                              
-        6'b000001, 6'b001001, 6'b010001, 6'b011001, 6'b100001, 6'b101001, 6'b110001, 6'b111001: begin 
+        6'b000001, 6'b001001, 6'b010001,6'b100001: begin 
             fastres = 32'd0;
             mux_fastres_sel_temp = 1'b1;                        
         end
             
         // A = 1 cases
-        6'b000010, 6'b011010, 6'b101010, 6'b110010, 6'b111010: begin 
+        6'b000010: begin 
             if(muldiv_sel == 1'b0) begin
                 if(op_mul == 2'b00)
                     fastres = B;
@@ -60,7 +60,7 @@ begin
                     fastres = 32'd0;
             end
             else begin
-                if (op_div == 1'b0)
+                if (op_div1 == 1'b0)
                     fastres = 32'd0;
                 else 
                     fastres = 32'd1;
@@ -69,16 +69,24 @@ begin
         end
         
         // A = -1 cases
-        6'b000100, 6'b011100, 6'b101100, 6'b110100, 6'b111100: begin
-            if (op_div == 1'b0)
-                fastres = 32'd0;
-            else 
-                fastres = 32'hffffffff;
+        6'b000100: begin
+            if(muldiv_sel == 1'b0) begin
+				if(op_mul == 2'b00)
+                    fastres = B_2C;
+                else 
+                    fastres = 32'hffffffff;				
+			end
+			else begin
+				if (op_div1 == 1'b0)
+					fastres = 32'd0;
+				else 
+					fastres = 32'hffffffff;
 
-            mux_fastres_sel_temp = 1'b1;
+				mux_fastres_sel_temp = 1'b1;
+			end
         end
         
-        // A = 1 and B = 1 cases
+        // A = 1 and B = 1 case
         6'b010010: begin 
             if(muldiv_sel == 1'b0) begin
                 if(op_mul == 2'b00)
@@ -87,7 +95,7 @@ begin
                     fastres = 32'd0;
             end   		
             else begin
-                if (op_div == 1'b0)
+                if (op_div1 == 1'b0)
                     fastres = 32'd1;
                 else 
                     fastres = 32'd0;
@@ -96,27 +104,40 @@ begin
         end 
                                                     
         // A = 1 and B = -1, A = -1 and B = 1 cases
-        6'b100010, 6'b010100: begin                 	
-            if (op_div == 1'b0)
-                fastres = 32'hffffffff;
-            else 
-                fastres = 32'd0;
+        6'b100010, 6'b010100: begin
+			if(muldiv_sel == 1'b0) begin
+				fastres = 32'hffffffff;			
+			end
+			else begin
+				if (op_div1 == 1'b0)
+					fastres = 32'hffffffff;
+				else 
+					fastres = 32'd0;
+			end
             
             mux_fastres_sel_temp = 1'b1;                     
         end 
         
         // A = -1 and B = -1 cases
         6'b100100: begin
-            if (op_div == 1'b0)
-                fastres = 32'd1;
-            else 
-                fastres = 32'd0;
-            
-            mux_fastres_sel_temp = 1'b1;
+			if(muldiv_sel == 1'b0) begin
+				if(op_mul == 2'b00)
+                    fastres = 32'd1;
+                else 
+                    fastres = 32'd0;				
+			end
+			else begin
+				if (op_div1 == 1'b0)
+					fastres = 32'd1;
+				else 
+					fastres = 32'd0;
+				
+				mux_fastres_sel_temp = 1'b1;
+			end
         end
         
-        // B = 1 cases
-        6'b010000, 6'b010011, 6'b010101, 6'b010110, 6'b010111: begin 
+        // B = 1 case
+        6'b010000: begin 
             if(muldiv_sel == 1'b0) begin
                 if(op_mul == 2'b00)
                     fastres = A;
@@ -124,7 +145,7 @@ begin
                     fastres = 32'd0;
             end
             else begin
-                if (op_div == 1'b0)
+                if (op_div1 == 1'b0)
                     fastres = A;
                 else 
                     fastres = 32'd0;
@@ -132,18 +153,26 @@ begin
             mux_fastres_sel_temp = 1'b1;
         end
 
-        // B = -1 cases
-        6'b100000, 6'b100011, 6'b100101, 6'b100110, 6'b100111: begin                          
-            if (op_div == 1'b0)
-                fastres = A_2C;
-            else 
-                fastres = 32'd0;
-                
-            mux_fastres_sel_temp = 1'b1;
+        // B = -1 case
+        6'b100000: begin  
+			if(muldiv_sel == 1'b0) begin
+				if(op_mul == 2'b00)
+                    fastres = A_2C;
+                else 
+                    fastres = 32'hffffffff;				
+			end
+			else begin
+				if (op_div1 == 1'b0)
+					fastres = A_2C;
+				else 
+					fastres = 32'd0;
+					
+				mux_fastres_sel_temp = 1'b1;
+			end
         end
 
         // B = 0 cases
-        6'b001000, 6'b001010, 6'b001011, 6'b001100, 6'b001101, 6'b001110, 6'b001111: begin
+        6'b001000, 6'b001010, 6'b001100: begin
             if(muldiv_sel == 1'b0)                            
                 fastres = 32'd0;                           
             else begin
@@ -161,10 +190,13 @@ begin
             fastres = 32'd0;
         end      
         
-        // other impossible cases
+        // impossible cases
         6'b000011, 6'b000101, 6'b000110, 6'b000111, 6'b011000, 6'b101000, 6'b110000, 6'b111000,
         6'b011011, 6'b011101, 6'b011110, 6'b011111, 6'b101011, 6'b101101, 6'b101110, 6'b101111,
-        6'b110011, 6'b110101, 6'b110110, 6'b110111, 6'b111011, 6'b111101, 6'b111110, 6'b111111: begin 
+        6'b110011, 6'b110101, 6'b110110, 6'b110111, 6'b111011, 6'b111101, 6'b111110, 6'b111111,
+		6'b011100, 6'b101100, 6'b110100, 6'b111100, 6'b011001, 6'b101001, 6'b110001, 6'b111001,
+		6'b011010, 6'b101010, 6'b110010, 6'b111010, 6'b010011, 6'b010101, 6'b010110, 6'b010111,
+		6'b100011, 6'b100101, 6'b100110, 6'b100111, 6'b001011, 6'b001101, 6'b001110, 6'b001111: begin 
             mux_fastres_sel_temp = 1'b1;
             fastres = 32'd0;
         end                    
