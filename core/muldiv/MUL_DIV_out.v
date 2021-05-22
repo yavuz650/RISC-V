@@ -19,12 +19,12 @@ module DIVout(
     
     assign signs = {Divisor32, Dividend32};
     assign out_Qs = signs[1] ? (signs[0] ? Q_plus_1 : Q_2C) : (signs[0] ? Q_1C : Q);
-    assign out_Q = op_div[0] ? out_Qs : Q;
+    assign out_Q = op_div[1] ? out_Qs : Q;
     
     assign out_Rs = signs[1] ? Divisor_minus_R : (signs[0] ? Divisor_minus_R : R);
-    assign out_R = op_div[0] ? out_Rs : R;
+    assign out_R = op_div[1] ? out_Rs : R;
     
-    assign out_div = op_div[1] ? out_R : out_Q;
+    assign out_div = op_div[0] ? out_R : out_Q;
     
 endmodule
 
@@ -47,6 +47,6 @@ module MULout(
     assign P_su = signs[1] ? P_2C : P;
     
 
-    assign out_mul = op_mul[1] ? (op_mul[0] ? P[63:32] : P_su[63:32]) : (op_mul[0] ? P_s[63:32] : P_s[31:0]);
+    assign out_mul = op_mul[1] ? (op_mul[0] ? P_su[63:32] : P[63:32] ) : (op_mul[0] ? P_s[63:32] : P[31:0]);
     
 endmodule

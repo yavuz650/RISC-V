@@ -27,10 +27,10 @@ module MULDIV_top (
     reg [63:0] reg_AB, reg_muldiv;
 
 
-    MULDIV_ctrl MULDIV_ctrl(clk, start, reset, muldiv_sel, AB_status, div_rdy, op_mul, op_div[1], in_A, in_B, out_A_2C, 
+    MULDIV_ctrl MULDIV_ctrl(clk, start, reset, muldiv_sel, AB_status, div_rdy, op_mul, op_div[0], in_A, in_B, out_A_2C, 
     div_start, reg_AB_en, reg_muldiv_en, mux_muldiv_sel, mux_muldiv_out_sel, mux_fastres_sel, fastres, muldiv_done);
 
-    MULDIV_in MULDIV_in(in_A, in_B, op_div[0], op_mul, muldiv_sel,
+    MULDIV_in MULDIV_in(in_A, in_B, op_div[1], op_mul, muldiv_sel,
     AB_status, out_A, out_B, out_A_2C);
 
     assign AB = reg_AB;
