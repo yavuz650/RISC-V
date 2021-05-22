@@ -40,7 +40,7 @@ int main(int argc, char** argv)
 		barebones_top->eval();
         tfp->dump(main_time);
         main_time++;
-        if(main_time > 50000)
+        if(main_time > 2500000)
         {
             std::cout << "Failure - Time out...\n";
             break;
