@@ -52,19 +52,25 @@ module MULDIV_in(
 	       
 			32'hffffffff: begin
 			    A0 = 1'b0;
-				A1 = 1'b1;
+				A1 = 1'b0;
 				if(muldiv_sel) begin
 					if(op_div0)
-						Am1 = 1;
+						Am1 = 1'b1;
 					else 
-						Am1 = 0;
+						Am1 = 1'b0;
 				end          
 				else begin
 					if(op_mul != 2'b11)
-						Am1 = 1;
+						Am1 = 1'b1;
 					else 
-						Am1 = 0;
+						Am1 = 1'b0;
 				end
+			end
+			
+			default: begin
+				A0 = 1'b0;
+				A1 = 1'b0;
+				Am1 = 1'b0;
 			end
 		endcase
 	end
@@ -85,19 +91,25 @@ module MULDIV_in(
 	       
 			32'hffffffff: begin
 			    B0 = 1'b0;
-				B1 = 1'b1;
+				B1 = 1'b0;
 				if(muldiv_sel) begin
 					if(op_div0)
-						Bm1 = 1;
+						Bm1 = 1'b1;
 					else 
-						Bm1 = 0;
+						Bm1 = 1'b0;
 				end          
 				else begin
 					if(op_mul == 2'b00 || op_mul == 2'b01)
-						Am1 = 1;
+						Am1 = 1'b1;
 					else 
-						Am1 = 0;
+						Am1 = 1'b0;
 				end
+			end
+			
+			default: begin
+				B0 = 1'b0;
+				B1 = 1'b0;
+				Bm1 = 1'b0;
 			end
 		endcase
 	end
