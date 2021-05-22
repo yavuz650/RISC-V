@@ -10,6 +10,11 @@ echo "Testing bubble sort with interrupts..."
 cd bubble_sort_irq
 ./bubble_sort_irq_script
 cd ..
+#Run bubble sort with direct mode interrupts
+echo "Testing bubble sort with direct mode interrupts..."
+cd direct_mode
+./direct_mode_script
+cd ..
 #Run AES encryption test
 echo "Testing AES encryption..."
 cd aes
