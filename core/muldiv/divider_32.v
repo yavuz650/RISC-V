@@ -84,12 +84,13 @@ module div_array(
 	output q);
 	
 	wire [32:0] r_temp;
+	wire q_temp;
 	
 	assign r_temp = a - b;
+	assign q_temp = ~r_temp[32];
 	
-	assign q = ~r_temp[32];
-	
-	assign r = q ? r_temp[31:0] : a;
+	assign q = q_temp;
+	assign r = q_temp ? r_temp[31:0] : a;
 	
 endmodule
 

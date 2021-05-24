@@ -100,9 +100,9 @@ module MULDIV_in(
 				end          
 				else begin
 					if(op_mul == 2'b00 || op_mul == 2'b01)
-						Am1 = 1'b1;
+						Bm1 = 1'b1;
 					else 
-						Am1 = 1'b0;
+						Bm1 = 1'b0;
 				end
 			end
 			

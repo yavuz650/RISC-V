@@ -46,7 +46,7 @@ always @*
 begin
     case(AB_status)                   
         // A = 0 cases                                              
-        6'b000001, 6'b001001, 6'b010001,6'b100001: begin 
+        6'b000001, 6'b001001, 6'b010001,6'b100001: begin
             fastres = 32'd0;
             mux_fastres_sel_temp = 1'b1;                        
         end
@@ -64,7 +64,7 @@ begin
                     fastres = 32'd0;
                 else 
                     fastres = 32'd1;
-            end
+            end           
             mux_fastres_sel_temp = 1'b1;
         end
         
@@ -80,10 +80,10 @@ begin
 				if (op_div1 == 1'b0)
 					fastres = 32'd0;
 				else 
-					fastres = 32'hffffffff;
-
-				mux_fastres_sel_temp = 1'b1;
+					fastres = 32'hffffffff;				
 			end
+			mux_fastres_sel_temp = 1'b1;
+			
         end
         
         // A = 1 and B = 1 case
@@ -99,7 +99,7 @@ begin
                     fastres = 32'd1;
                 else 
                     fastres = 32'd0;
-            end
+            end           
             mux_fastres_sel_temp = 1'b1;                 
         end 
                                                     
@@ -113,8 +113,7 @@ begin
 					fastres = 32'hffffffff;
 				else 
 					fastres = 32'd0;
-			end
-            
+			end           
             mux_fastres_sel_temp = 1'b1;                     
         end 
         
@@ -131,9 +130,8 @@ begin
 					fastres = 32'd1;
 				else 
 					fastres = 32'd0;
-				
-				mux_fastres_sel_temp = 1'b1;
-			end
+			end			
+			mux_fastres_sel_temp = 1'b1;
         end
         
         // B = 1 case
@@ -149,7 +147,7 @@ begin
                     fastres = A;
                 else 
                     fastres = 32'd0;
-            end
+            end           
             mux_fastres_sel_temp = 1'b1;
         end
 
@@ -165,10 +163,9 @@ begin
 				if (op_div1 == 1'b0)
 					fastres = A_2C;
 				else 
-					fastres = 32'd0;
-					
-				mux_fastres_sel_temp = 1'b1;
-			end
+					fastres = 32'd0;							
+			end			
+			mux_fastres_sel_temp = 1'b1;
         end
 
         // B = 0 cases
@@ -180,7 +177,7 @@ begin
                     fastres = 32'hffffffff;
                 else 
                     fastres = A;
-            end
+            end            
             mux_fastres_sel_temp = 1'b1;                  
         end
             
