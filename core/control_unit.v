@@ -220,10 +220,13 @@ begin
 			B = 1'b0;
 			J = 1'b0;
 			EX_mux7 = 1'b1;
-			case(funct7)
-				7'd1: EX_mux6 = 2'b10;
-				default: EX_mux6 = 2'b00;
-			endcase
+
+			//If the instruction is a MUL/DIV, choose the output from the MULDIV block.
+			if(funct7 == 7'd1 && opcode[5] == 1'b1)
+				EX_mux6 = 2'b10;
+			else
+				EX_mux6 = 2'b00;
+
 			EX_mux5 = 1'b0;
 			EX_mux1 = data1_EX;
 
