@@ -27,7 +27,7 @@ module MULDIV_top (
     reg [63:0] reg_AB, reg_muldiv;
 
 
-    MULDIV_ctrl MULDIV_ctrl(clk, start, reset, muldiv_sel, AB_status, div_rdy, op_mul, op_div[1], in_A, in_B, out_A_2C, out_B_2C, 
+    MULDIV_ctrl MULDIV_ctrl(clk, start, reset, muldiv_sel, AB_status, div_rdy, op_mul, op_div[1], in_A, in_B, out_A_2C, out_B_2C,
     div_start, reg_AB_en, reg_muldiv_en, mux_muldiv_sel, mux_muldiv_out_sel, mux_fastres_sel, fastres, muldiv_done);
 
     MULDIV_in MULDIV_in(in_A, in_B, op_div[0], op_mul, muldiv_sel,
@@ -55,17 +55,17 @@ module MULDIV_top (
             reg_AB <= 63'd0;
             reg_muldiv <= 63'd0;
         end
-        
+
         else begin
             if(reg_AB_en) begin
                 reg_AB[31:0] <= out_B;
                 reg_AB[63:32] <= out_A;
             end
-    
-            if(reg_muldiv_en) 
+
+            if(reg_muldiv_en)
                 reg_muldiv <= muldiv1;
         end
     end
 
-   
+
 endmodule
