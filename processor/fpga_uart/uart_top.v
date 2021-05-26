@@ -25,6 +25,7 @@ wire [3:0] data_wmask;
 wire data_wen, mtip_o;
 wire [31:0] instr_addr_o, data_addr_o;
 wire [31:0] mem_data_o, mem_instr_o, core_data_o, mtime_data_o, core_data_i;
+wire data_req;
 wire sram_csb, mtime_csb;
 
 reg [31:0] data_addr_o_reg, core_data_o_reg;
@@ -76,7 +77,10 @@ core #(.reset_vector(32'h7400)) core0(.clk_i(clk_i),
                                       .data_o(core_data_o),
                                       .data_wmask_o(data_wmask),
                                       .data_wen_o(data_wen),
+                                      .data_req_o(data_req),
+                                      .data_err_i(1'b0),
                                       .instr_addr_o(instr_addr_o),
+                                      .instr_access_fault_i(1'b0),
                                       .data_addr_o(data_addr_o),
                                       .irq_ack_o(irq_ack_o));
 
