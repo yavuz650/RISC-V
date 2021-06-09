@@ -9,19 +9,17 @@ module DIVout(
     input [1:0] op_div,
     output [31:0] out_div);
 
-    wire [31:0] Q_1C, Q_2C, Q_plus_1, Divisor_minus_R, out_Rs, out_Qs, out_Q, out_R;
+    wire [31:0] Q_2C, R_2C, out_Rs, out_Qs, out_Q, out_R;
     wire [1:0] signs;
 
-    assign Q_1C = ~Q;
-    assign Q_2C = Q_1C + 1;
-    assign Q_plus_1 = Q + 1;
-    assign Divisor_minus_R = Divisor_2C - R;
+    assign Q_2C = ~Q + 1;
+    assign R_2C = ~R + 1;
 
     assign signs = {Divisor32, Dividend32};
-    assign out_Qs = signs[1] ? (signs[0] ? Q_plus_1 : Q_2C) : (signs[0] ? Q_1C : Q);
+    assign out_Qs = signs[1] ? (signs[0] ? Q : Q_2C) : (signs[0] ? Q_2C : Q);
     assign out_Q = op_div[0] ? Q : out_Qs;
 
-    assign out_Rs = signs[1] ? Divisor_minus_R : (signs[0] ? Divisor_minus_R : R);
+    assign out_Rs = signs[0] ? R_2C : R;
     assign out_R = op_div[0] ? R : out_Rs;
 
     assign out_div = op_div[1] ? out_R : out_Q;
