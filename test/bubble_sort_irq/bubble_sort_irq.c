@@ -35,12 +35,9 @@ int main()
     int sorted_arr[] = {14,32,54,103,128,176,195};
     bubble_sort(unsorted_arr,7);
     int *addr_ptr = DEBUG_IF_ADDR;
-    if(!memcmp((char*) sorted_arr, (char*) unsorted_arr, 7))
+    if(!memcmp((char*) sorted_arr, (char*) unsorted_arr, 28))
     {
-        if(dum == 23)
-            *addr_ptr = 1; //success
-        else
-            *addr_ptr = 0; //failure
+        *addr_ptr = 1; //success
     }
     else
     {
