@@ -28,8 +28,7 @@ int main()
     sorter(myarr,7);
 
     int *addr_ptr = DEBUG_IF_ADDR;
-
-    if(!memcmp((char*) sorter_arr, (char*) myarr, 7))
+    if(memcmp((char*) sorter_arr, (char*) myarr, 28) == 0)
     {
         //success
         *addr_ptr = 1;
