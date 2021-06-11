@@ -7,7 +7,7 @@ module uart_top(input M100_clk_i,
                 output irq_ack_o,
                 output led1,led2,led3,led4);
 
-parameter SYS_CLK_FREQ = 60000000;
+parameter SYS_CLK_FREQ = 45000000;
 
 wire clk_i, locked;
  clk_wiz_0 clkwiz0 
@@ -15,7 +15,7 @@ wire clk_i, locked;
   // Clock out ports
          .clk_out1(clk_i),
   // Status and control signals
-           .resetn(reset_i),
+           .reset(1'b0),
           .locked(locked),
  // Clock in ports
            .clk_in1(M100_clk_i)
