@@ -18,19 +18,19 @@ int main()
 
     uart_init(&uart0,0x00008010);
 
-    /*for (int i = 0; i < 10; i++)
-    {
-        mul_res = (int64_t)a[i] * b[i];
-        //ltoa(mul_res,tx_string,10);
-        uart_transmit_string(&uart0,tx_string,strlen(tx_string));
-    }*/
+    //TODO: Add MUL operations
 
     for (int i = 0; i < 10; i++)
     {
         div_res = c[i] / b[i];
         itoa(div_res,tx_string,10);
         uart_transmit_string(&uart0,tx_string,strlen(tx_string));
+        uart_transmit_byte(&uart0,'\n');
     }
 
+    while(1)
+    {
+
+    }
     return 0;
 }
