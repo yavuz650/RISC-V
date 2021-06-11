@@ -1,7 +1,7 @@
 #!/bin/sh
 
 MODULES="../../processor/barebones/barebones_top.v"
-verilator --cc --trace --exe aes_test_wrapper.cpp $MODULES -I../../core/ -I../../peripherals/ -I../../core/muldiv -v ../../core/muldiv/MUL_DIV_out.v \
+verilator --cc -Wno-lint --trace --exe aes_test_wrapper.cpp $MODULES -I../../core/ -I../../peripherals/ -I../../core/muldiv -v ../../core/muldiv/MUL_DIV_out.v \
 -v ../../core/muldiv/multiplier_32.v -v ../../core/muldiv/divider_32.v --trace-max-width 3000 --trace-max-array 3000
 cd obj_dir
 make -s -f Vbarebones_top.mk
