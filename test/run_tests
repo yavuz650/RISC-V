@@ -20,6 +20,11 @@ echo "Testing soft float..."
 cd soft_float
 ./soft_float_script
 cd ..
+#Run MUL/DIV test
+echo "Testing MUL/DIV..."
+cd muldiv
+./muldiv_script
+cd ..
 
 #Done testing
 echo "Finished tests."
