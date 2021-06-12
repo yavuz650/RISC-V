@@ -6,8 +6,10 @@ build:
 	$(CC32)-gcc reset_handler.s $(CCFLAGS)
 	$(CC32)-objcopy -O binary -j .init -j .text -j .rodata reset_handler.elf reset_handler.bin
 	../../../test/rom_generator reset_handler.bin
+	mv reset_handler.data reset_handler.mem 
 
 multilib:
 	$(CC64)-gcc reset_handler.s $(CCFLAGS)
 	$(CC64)-objcopy -O binary -j .init -j .text -j .rodata reset_handler.elf reset_handler.bin
 	../../../test/rom_generator reset_handler.bin
+	mv reset_handler.data reset_handler.mem 

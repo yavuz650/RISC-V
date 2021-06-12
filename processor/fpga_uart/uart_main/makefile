@@ -6,8 +6,10 @@ build:
 	$(CC32)-gcc uart_main.c ../../../lib/uart.c crt0.s $(CCFLAGS)
 	$(CC32)-objcopy -O binary -j .init -j .text -j .rodata uart_main.elf uart_main.bin
 	../../../test/rom_generator uart_main.bin
+	mv uart_main.data uart_main.mem 
 
 multilib:
 	$(CC64)-gcc uart_main.c ../../../lib/uart.c crt0.s $(CCFLAGS)
 	$(CC64)-objcopy -O binary -j .init -j .text -j .rodata uart_main.elf uart_main.bin
 	../../../test/rom_generator uart_main.bin
+	mv uart_main.data uart_main.mem 

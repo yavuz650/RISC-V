@@ -6,9 +6,11 @@ build:
 	$(CC32)-gcc bootloader.c ../../../lib/uart.c ../../../lib/irq.c crt0.s $(CCFLAGS)
 	$(CC32)-objcopy -O binary -j .init -j .text -j .rodata bootloader.elf bootloader.bin
 	../../../test/rom_generator bootloader.bin
+	mv bootloader.data bootloader.mem 
 
 multilib:
 	$(CC64)-gcc bootloader.c ../../../lib/uart.c ../../../lib/irq.c crt0.s $(CCFLAGS)
 	$(CC64)-objcopy -O binary -j .init -j .text -j .rodata bootloader.elf bootloader.bin
 	../../../test/rom_generator bootloader.bin
+	mv bootloader.data bootloader.mem 
 
