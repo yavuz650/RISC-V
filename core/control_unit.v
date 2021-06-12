@@ -7,10 +7,14 @@ This module is responsible for generating the necessary control signals for the 
 
 module control_unit(input [31:0] instr_i,
 
+                    output reg muldiv_start,
+                    output reg muldiv_sel,
+                    output reg [1:0] op_mul,
+                    output reg [1:0] op_div,
                     output reg [3:0] ALU_func1,
                     output reg [1:0] ALU_func2,
-                    output reg EX_mux5, EX_mux6, EX_mux7,
-                    output reg [1:0] EX_mux1, EX_mux3,
+                    output reg EX_mux5, EX_mux7,
+                    output reg [1:0] EX_mux1, EX_mux3, EX_mux6,
                     output reg B, J,
                     output reg [1:0] MEM_len, //memory load-store length
                     output reg MEM_wen, WB_rf_wen, WB_csr_wen, //memory write enable, register file write enable, CSR unit write enable
@@ -40,6 +44,23 @@ assign funct7 = instr_i[31:25];
 
 always @*
 begin
+    if(opcode == 7'b01100_11 && funct7 == 7'd1) begin
+        muldiv_start = 1'b1;
+        muldiv_sel = funct3[2];
+        op_mul = funct3[1:0];
+        op_div = funct3[1:0];
+    end
+    else begin
+        muldiv_start = 1'b0;
+        muldiv_sel = 1'b0;
+        op_mul = 2'b00;
+        op_div = 2'b00;
+    end
+
+end
+
+always @*
+begin
 	casez(opcode)
 		//BEQ, BNE, BLT, BGE, BLTU, BGEU
 		7'b11000_11:
@@ -54,7 +75,7 @@ begin
 			B = 1'b1;
 			J = 1'b0;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 1'b0;
+			EX_mux6 = 2'b00;
 			EX_mux5 = 1'b1;
 			EX_mux3 = data2_EX;
 			EX_mux1 = data1_EX;
@@ -82,7 +103,7 @@ begin
 			B = 1'b0;
 			J = 1'b0;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 1'b0;
+			EX_mux6 = 2'b00;
 			EX_mux5 = 1'b0;
 			EX_mux3 = imm_EX;
 			EX_mux1 = pc_EX;
@@ -102,7 +123,7 @@ begin
 			B = 1'b0;
 			J = 1'b0;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 1'b0;
+			EX_mux6 = 2'b00;
 			EX_mux5 = 1'b0;
 			EX_mux3 = imm_EX;
 			EX_mux1 = pc_EX;
@@ -122,7 +143,7 @@ begin
 			B = 1'b0;
 			J = 1'b1;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 1'b0;
+			EX_mux6 = 2'b00;
 			EX_mux3 = data2_EX;
 			EX_mux1 = pc_EX;
 			ALU_func1 = 4'b1110;
@@ -144,7 +165,7 @@ begin
 			B = 1'b0;
 			J = 1'b0;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 1'b0;
+			EX_mux6 = 2'b00;
 			EX_mux5 = 1'b0;
 			EX_mux3 = imm_EX;
 			EX_mux1 = data1_EX;
@@ -172,7 +193,7 @@ begin
 			B = 1'b0;
 			J = 1'b0;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 1'b0;
+			EX_mux6 = 2'b00;
 			EX_mux5 = 1'b0;
 			EX_mux3 = imm_EX;
 			EX_mux1 = data1_EX;
@@ -199,7 +220,13 @@ begin
 			B = 1'b0;
 			J = 1'b0;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 1'b0;
+
+			//If the instruction is a MUL/DIV, choose the output from the MULDIV block.
+			if(funct7 == 7'd1 && opcode[5] == 1'b1)
+				EX_mux6 = 2'b10;
+			else
+				EX_mux6 = 2'b00;
+
 			EX_mux5 = 1'b0;
 			EX_mux1 = data1_EX;
 
@@ -246,7 +273,7 @@ begin
 			B = 1'b0;
 			J = 1'b0;
 			EX_mux5 = 1'b0;
-			EX_mux6 = 1'b1;
+			EX_mux6 = 2'b01;
 			EX_mux7 = 1'b0;
 
 			case(funct3[2])
@@ -268,7 +295,7 @@ begin
 		default: begin
 			ALU_func1 = 4'b0;
 			ALU_func2 = 2'b0;
-			{EX_mux5, EX_mux6, EX_mux7, EX_mux1, EX_mux3} = 7'b0;
+			{EX_mux5, EX_mux6, EX_mux7, EX_mux1, EX_mux3} = 8'b0;
 			{B, J} = 2'b0;
 			MEM_len = 2'b0;
 			WB_mux = 2'b0;
@@ -325,8 +352,12 @@ begin
 			case(opcode[5])
 				1'b1:
 				begin
-					if(funct3 == 3'd0 || funct3 == 3'd5)
+					if(funct7 == 7'd1)
+						illegal_instr = 1'b0;
+
+					else if(funct3 == 3'd0 || funct3 == 3'd5)
 						illegal_instr = {funct7[6],funct7[4:0]} != 6'd0;
+
 					else
 						illegal_instr = funct7 != 7'd0;
 				end

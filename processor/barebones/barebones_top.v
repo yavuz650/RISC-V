@@ -169,7 +169,8 @@ mtime_registers mtime0(.reset_i(reset_i),
                        .mtip_o(mtip),
                        .data_o(mtime_data_out));
 
-debug_interface debug_if(.reset_i(reset_i),
+debug_interface debug_if(.clk_i(clk_i),
+                         .reset_i(reset_i),
                          .csb_i(debug_if_csb_reg),
                          .data_i(core_data_out_reg),      //data memory input
                          .data_wen_i(core_data_wen_reg)); //data memory write enable output
