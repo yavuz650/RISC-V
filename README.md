@@ -2,7 +2,7 @@
 Hornet is a simple, fully open-source, FPGA-proven 32-bit RISC-V core.
 
 ## Highlights
-* RV32I instructions
+* RV32IM instructions
 * Machine mode support
 * 5-stage pipelined microarchitecture
 * Misaligned access support
