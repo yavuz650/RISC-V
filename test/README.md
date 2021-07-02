@@ -56,7 +56,10 @@ First, change your directory to `processor/barebones`. There, compile the source
 xmvlog ../../core/core.v ../../core/ALU.v ../../core/control_unit.v ../../core/forwarding_unit.v ../../core/hazard_detection_unit.v \
 ../../core/imm_decoder.v ../../core/load_store_unit.v ../../core/csr_unit.v \
 ../../peripherals/memory_2rw.v ../../peripherals/mtime_registers.v \
+../../core/muldiv/divider_32.v ../../core/muldiv/multiplier_32.v ../../core/muldiv/MULDIV_ctrl.v ../../core/muldiv/MULDIV_in.v \
+../../core/muldiv/MUL_DIV_out.v ../../core/muldiv/MULDIV_top.v ../../peripherals/debug_interface.v \
 barebones_top.v barebones_top_tb.v
+
 ```
 You could also use `` `include `` command in the source files to avoid this verbose command. Now, elaborate the design with the command below,
 
