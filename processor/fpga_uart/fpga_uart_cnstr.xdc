@@ -5,9 +5,9 @@ set_property -dict { PACKAGE_PIN R2    IOSTANDARD SSTL135 } [get_ports { M100_cl
 #Reset input from switch
 set_property -dict { PACKAGE_PIN H14   IOSTANDARD LVCMOS33 } [get_ports { reset_i }]; #IO_L20N_T3_A19_15 Sch=sw[0]
 #Uart RX
-set_property -dict { PACKAGE_PIN L13   IOSTANDARD LVCMOS33 } [get_ports { rx_i }]; #IO_0_14 Sch=ck_io[0]
+set_property -dict { PACKAGE_PIN V12   IOSTANDARD LVCMOS33 } [get_ports { rx_i }]; #IO_0_14 Sch=ck_io[0]
 #Uart TX
-set_property -dict { PACKAGE_PIN N13   IOSTANDARD LVCMOS33 } [get_ports { tx_o }]; #IO_L6N_T0_D08_VREF_14   Sch=ck_io[1]
+set_property -dict { PACKAGE_PIN R12   IOSTANDARD LVCMOS33 } [get_ports { tx_o }]; #IO_L6N_T0_D08_VREF_14   Sch=ck_io[1]
 #IRQ acknowledge signal, not used in this design.
 set_property -dict { PACKAGE_PIN R14   IOSTANDARD LVCMOS33 } [get_ports { irq_ack_o }]; #IO_L13P_T2_MRCC_14      Sch=ck_io[3]
 
