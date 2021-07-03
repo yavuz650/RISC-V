@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
-module core(input hreset_i, sreset_i,  //active-low resets. all write_enable signals are also active-low.
-                                       //different reset signals set mcause to different values.
+module core(input reset_i, //active-low reset
+
             input clk_i,
 
             input  [31:0] data_i,       //data memory input
@@ -22,7 +22,6 @@ module core(input hreset_i, sreset_i,  //active-low resets. all write_enable sig
             output irq_ack_o);     //interrupt acknowledge signal. driven high for one cycle when an external interrupt is handled.
 
 parameter reset_vector = 32'h0; //pc is set to this address when a reset occurs.
-wire reset_i;
 
 //IF SIGNALS--------IF SIGNALS--------IF SIGNALS--------IF SIGNALS--------IF SIGNALS--------IF SIGNALS--------IF SIGNALS
 //mux signals
@@ -195,8 +194,7 @@ begin
 end
 //instantiate CSR Unit
 csr_unit CSR_UNIT(.clk_i(clk_i),
-                  .hreset_i(hreset_i),
-                  .sreset_i(sreset_i),
+                  .reset_i(reset_i),
                   .pc_i(csr_pc_input),
                   .csr_r_addr_i(IFID_preg_instr[31:20]),
                   .csr_w_addr_i(csr_addr_WB),
@@ -231,7 +229,6 @@ csr_unit CSR_UNIT(.clk_i(clk_i),
                   .ebreak_i(ctrl_unit_ebreak),
                   .instr_addr_misaligned_i(instr_addr_misaligned));
 
-assign reset_i = hreset_i & sreset_i;
 //IF STAGE---------------------------------------------------------------------------------
 assign mux2_ctrl_IF = hazard_stall_IF | misaligned_access;
 assign mux3_ctrl_IF = take_branch;
