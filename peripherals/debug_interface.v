@@ -2,10 +2,10 @@
 
 module debug_interface(input         reset_i,
                        input         clk_i,
-                       input         csb_i,
+                       input         csb_i, //chip-select input
 
-                       input  [31:0] data_i,      //data memory input
-                       input         data_wen_i); //data memory write enable output
+                       input  [31:0] data_i,      //data input
+                       input         data_wen_i); //write enable input
 
 always @(posedge clk_i or negedge reset_i)
 begin
