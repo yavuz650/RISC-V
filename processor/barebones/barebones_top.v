@@ -123,8 +123,7 @@ begin
 end
 
 core core0(.clk_i(clk_i),
-           .hreset_i(reset_i),
-           .sreset_i(1'b1),
+           .reset_i(reset_i),
 
            .data_addr_o(core_data_addr),
            .data_i(core_data_in),
