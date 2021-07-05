@@ -8,10 +8,9 @@ In order to integrate Hornet core into your design, you need to instantiate it i
 core    //Program counter will be set to reset_vector when a reset occurs. By default, it is 0.
         #(.reset_vector())
         core0(
-        //Clock and reset signals. Resets are both active-low
+        //Clock and reset signals.
         .clk_i(),
-        .hreset_i(), //Hard reset, sets mcause to 0
-        .sreset_i(), //Soft reset, sets mcause to 1. Tie this to 1 if you don't need it
+        .reset_i(), //active-low, asynchronous reset
 
         //Data memory interface
         .data_addr_o(),
