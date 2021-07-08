@@ -7,7 +7,7 @@ wire irq_ack_o;
 reg meip_i;
 reg [15:0] fast_irq_i;
 
-barebones_top uut(.reset_i(reset_i), .clk_i(clk_i), .meip_i(meip_i), .fast_irq_i(fast_irq_i), .irq_ack_o(irq_ack_o));
+barebones_wb_top uut(.reset_i(reset_i), .clk_i(clk_i), .meip_i(meip_i), .fast_irq_i(fast_irq_i), .irq_ack_o(irq_ack_o));
 
 //100 MHz clock
 always begin
