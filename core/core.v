@@ -1,5 +1,3 @@
-`timescale 1ns/1ps
-
 module core(input reset_i, //active-low reset
 
             input clk_i,
@@ -9,17 +7,18 @@ module core(input reset_i, //active-low reset
             output        data_wen_o,   //data memory write enable output
             output [31:0] data_addr_o,  //data memory address output
             output [31:0] data_o,       //data memory data output
-            output        data_req_o,   //data access request output. driven high when a store/load is carried out
-            input         data_err_i,   //data access error input. this will trigger a store/load access fault.
+            output        data_req_o,   //data memory access request output. driven high when a store/load is carried out
+            input         data_stall_i, //data memory stall input. pipeline is stalled when a memory access request is answered with a stall.
+            input         data_err_i,   //data memory access error input. this will trigger a store/load access fault.
 
-            input  [31:0] instr_i,      //instruction input
-            output [31:0] instr_addr_o, //instruction address output
+            input  [31:0] instr_i,              //instruction input
+            output [31:0] instr_addr_o,         //instruction address output
             input         instr_access_fault_i, //instruction access fault exception signal
 
             input         meip_i, mtip_i, msip_i, //interrupts
             input  [15:0] fast_irq_i,
 
-            output irq_ack_o);     //interrupt acknowledge signal. driven high for one cycle when an external interrupt is handled.
+            output irq_ack_o); //interrupt acknowledge signal. driven high for one cycle when an external interrupt is handled.
 
 parameter reset_vector = 32'h0; //pc is set to this address when a reset occurs.
 
@@ -31,7 +30,7 @@ wire [31:0] mux1_o_IF, mux2_o_IF, mux3_o_IF, mux4_o_IF; //mux outputs
 wire [31:0] pc_i; //pc input
 reg  [31:0] pc_o; //pc output
 
-wire hazard_stall_IF; //stalls the IF stage when it is high. it is driven by the hazard detection unit.
+wire stall_IF; //stalls the IF stage when it is high.
 //pipeline registers
 reg [31:0] IFID_preg_instr;
 reg [31:0] IFID_preg_pc;
@@ -43,7 +42,7 @@ wire [4:0]  rs1_ID, rs2_ID, rd_ID; //register addresses
 wire [31:0] data1_ID, data2_ID;
 wire [11:0] csr_addr_ID; //CSR register address
 wire        mret_ID; //driven high when the instruction in ID stage is MRET.
-wire        hazard_stall_ID;
+wire        stall_ID;
 //control unit outputs
 wire ctrl_unit_muldiv_start;
 wire ctrl_unit_muldiv_sel;
@@ -110,6 +109,7 @@ wire [3:0]  alu_func1;
 wire [1:0]  alu_func2;
 wire [31:0] aluout_EX;
 
+wire        stall_EX;
 wire        J, B, L; //jump, branch, load
 wire        misaligned_access; //driven high when the first part of a misaligned access is being executed.
 wire        mem_wen_EX;
@@ -230,7 +230,7 @@ csr_unit CSR_UNIT(.clk_i(clk_i),
                   .instr_addr_misaligned_i(instr_addr_misaligned));
 
 //IF STAGE---------------------------------------------------------------------------------
-assign mux2_ctrl_IF = hazard_stall_IF | misaligned_access;
+assign mux2_ctrl_IF = stall_IF;
 assign mux3_ctrl_IF = take_branch;
 
 assign mux1_o_IF = mux1_ctrl_IF ? mepc : irq_addr;
@@ -241,7 +241,7 @@ assign mux4_o_IF = mux4_ctrl_IF ? mux3_o_IF : mux1_o_IF;
 assign pc_i = reset_i ? mux4_o_IF : reset_vector;
 assign instr_addr_o = pc_i;
 
-assign hazard_stall_IF = hazard_stall | muldiv_stall_EX;
+assign stall_IF = hazard_stall | muldiv_stall_EX | misaligned_access | data_stall_i;
 
 always @(posedge clk_i or negedge reset_i)
 begin
@@ -262,17 +262,13 @@ begin
 
 	else
 	begin
-		if(!hazard_stall_IF & !misaligned_access) //stall the pipe if necessary
+		if(!stall_ID) //stall the pipe if necessary
 		begin
 			IFID_preg_instr <= instr_i;
 			IFID_preg_pc <= pc_o;
 			IFID_preg_dummy <= 1'b0;
 			pc_o <= pc_i;
 		end
-		/*
-		else
-			IFID_preg_dummy <= 1'b1;
-		*/
 	end
 end
 //END IF STAGE-----------------------------------------------------------------------------
@@ -286,7 +282,7 @@ assign pc_ID        = IFID_preg_pc;
 assign imm_dec_i    = IFID_preg_instr[31:2];
 assign csr_addr_ID  = IFID_preg_instr[31:20];
 //assign nets
-assign hazard_stall_ID = hazard_stall;
+assign stall_ID = hazard_stall | muldiv_stall_EX | misaligned_access | data_stall_i;
 assign mux_ctrl_ID = hazard_stall;
 
 assign mux1_o_ID    = mux_ctrl_ID ? 7'h0c : {ctrl_unit_wb_mux,
@@ -352,7 +348,6 @@ begin
 		register_bank[rd_WB] <= mux_o_WB;
 end
 
-
 always @(posedge clk_i or negedge reset_i)
 begin
 	if(!reset_i)
@@ -369,7 +364,7 @@ begin
 		IDEX_preg_misaligned <= 1'b0;
 	end
 
-	else if(take_branch | csr_id_flush) //flush the pipe
+	else if(take_branch || csr_id_flush) //flush the pipe
 	begin
 		IDEX_preg_wb <= 7'h0c;
 		IDEX_preg_mem <= 3'b1;
@@ -383,11 +378,9 @@ begin
 		IDEX_preg_misaligned <= 1'b0;
 	end
 
-	else if(misaligned_access)
-	begin
-		IDEX_preg_misaligned <= 1'b1;
-
-		if(IDEX_preg_rs1 == 5'b0)
+    else if(stall_EX || misaligned_access)
+    begin
+        if(IDEX_preg_rs1 == 5'b0)
 			IDEX_preg_data1 <= 32'b0;
 		else
 			IDEX_preg_data1 <= register_bank[IDEX_preg_rs1];
@@ -396,58 +389,56 @@ begin
 			IDEX_preg_data2 <= 32'b0;
 		else
 			IDEX_preg_data2 <= register_bank[IDEX_preg_rs2];
-	end
 
-	else if(muldiv_stall_EX)
-	begin
-		if(IDEX_preg_rs1 == 5'b0)
-			IDEX_preg_data1 <= 32'b0;
-		else
-			IDEX_preg_data1 <= register_bank[IDEX_preg_rs1];
+        if(misaligned_access)
+            IDEX_preg_misaligned <= 1'b1;
 
-		if(IDEX_preg_rs2 == 5'b0)
-			IDEX_preg_data2 <= 32'b0;
-		else
-			IDEX_preg_data2 <= register_bank[IDEX_preg_rs2];
-	end
+    end
 
-	else
-	begin
-		IDEX_preg_imm <= imm_dec_o;
-		IDEX_preg_rd  <= rd_ID;
-		IDEX_preg_rs2 <= rs2_ID;
-		IDEX_preg_rs1 <= rs1_ID;
-		IDEX_preg_pc  <= pc_ID;
-		IDEX_preg_ex  <= mux3_o_ID;
-		IDEX_preg_mem <= mux2_o_ID;
-		IDEX_preg_wb  <= mux1_o_ID;
-		IDEX_preg_csr_addr <= csr_addr_ID;
-		IDEX_preg_mret <= mret_ID;
-		IDEX_preg_misaligned <= 1'b0;
+    else
+    begin
+        if(stall_ID)
+        begin
+            IDEX_preg_wb <= 7'h0c;
+            IDEX_preg_mem <= 3'b1;
+            IDEX_preg_misaligned <= 1'b0;
+            IDEX_preg_dummy <= 1'b1;
+            IDEX_preg_rd <= 5'b0;
+        end
 
-		if(!hazard_stall_ID)
-			IDEX_preg_dummy <= IFID_preg_dummy;
-		else
-			IDEX_preg_dummy <= 1'b1;
+        else
+        begin
+            IDEX_preg_imm <= imm_dec_o;
+            IDEX_preg_rd  <= rd_ID;
+            IDEX_preg_rs2 <= rs2_ID;
+            IDEX_preg_rs1 <= rs1_ID;
+            IDEX_preg_pc  <= pc_ID;
+            IDEX_preg_ex  <= mux3_o_ID;
+            IDEX_preg_mem <= mux2_o_ID;
+            IDEX_preg_wb  <= mux1_o_ID;
+            IDEX_preg_csr_addr <= csr_addr_ID;
+            IDEX_preg_mret <= mret_ID;
+            IDEX_preg_misaligned <= 1'b0;
+            IDEX_preg_dummy <= IFID_preg_dummy;
 
-		if(rs1_ID == 5'b0)
-			IDEX_preg_data1 <= 32'b0;
-		else
-			IDEX_preg_data1 <= register_bank[rs1_ID];
+            if(rs1_ID == 5'b0)
+                IDEX_preg_data1 <= 32'b0;
+            else
+                IDEX_preg_data1 <= register_bank[rs1_ID];
 
-		if(rs2_ID == 5'b0)
-			IDEX_preg_data2 <= 32'b0;
-		else
-			IDEX_preg_data2 <= register_bank[rs2_ID];
-	end
+            if(rs2_ID == 5'b0)
+                IDEX_preg_data2 <= 32'b0;
+            else
+                IDEX_preg_data2 <= register_bank[rs2_ID];
+        end
+    end
 end
 
 //END ID STAGE-----------------------------------------------------------------------------
 
 //EX STAGE---------------------------------------------------------------------------------
-//instantiate the MULDIV
 
-
+//instantiate MULDIV
 MULDIV_top MULDIV(.clk(clk_i),
                   .start(muldiv_start),
                   .reset(reset_i),
@@ -540,14 +531,13 @@ forwarding_unit FWD_UNIT(.rs1(rs1_EX),
 //instantiate the ALU
 ALU ALU (.src1(mux1_o_EX), .src2(mux3_o_EX), .func1(alu_func1), .func2(alu_func2), .alu_out(aluout_EX));
 
-
-
 //branch logic and address calculation
 assign take_branch = J | (B & aluout_EX[0]);
 assign branch_addr_calc = mux5_o_EX + imm_EX;
 assign branch_target_addr[31:1] = branch_addr_calc[31:1];
 assign branch_target_addr[0] = (!mux5_ctrl_EX & J) ? 1'b0 : branch_addr_calc[0]; //clear the least-significant bit if the instruction is JALR.
 assign instr_addr_misaligned = take_branch & (branch_target_addr[1:0] != 2'd0);
+assign stall_EX = muldiv_stall_EX | data_stall_i;
 
 always @(posedge clk_i or negedge reset_i) //clock the outputs to the pipeline register
 begin
@@ -565,33 +555,18 @@ begin
 		EXMEM_preg_addr_bits <= 2'b0;
 	end
 
-	else if(muldiv_stall_EX)
+	else if(stall_EX || csr_ex_flush)
 	begin
 	   EXMEM_preg_wb <= 7'h0c;
-	   EXMEM_preg_mem[2:1] <= EXMEM_preg_mem[2:1];
-	   EXMEM_preg_mem[0] <= mem_wen_EX;
-	   EXMEM_preg_csr_addr <= EXMEM_preg_csr_addr;
-	   {EXMEM_preg_pc, EXMEM_preg_aluout, EXMEM_preg_data2} <= {EXMEM_preg_pc, EXMEM_preg_aluout, EXMEM_preg_data2};
-	   EXMEM_preg_rd <= EXMEM_preg_rd;
-	   EXMEM_preg_imm <= EXMEM_preg_imm;
-	   EXMEM_preg_dummy <= EXMEM_preg_dummy;
-	   EXMEM_preg_mret <= EXMEM_preg_mret;
-	   EXMEM_preg_misaligned <= EXMEM_preg_misaligned;
-	   EXMEM_preg_addr_bits <= EXMEM_preg_addr_bits;
-	end
-
-	else if(csr_ex_flush)
-	begin
-		EXMEM_preg_wb <= 7'h0c;
-		EXMEM_preg_mem <= 3'b1;
-		EXMEM_preg_csr_addr <= 12'b0;
-		{EXMEM_preg_pc, EXMEM_preg_aluout, EXMEM_preg_data2} <= 96'b0;
-		EXMEM_preg_rd <= 5'b0;
-		EXMEM_preg_imm <= 32'b0;
-		EXMEM_preg_dummy <= 1'b1;
-		EXMEM_preg_mret <= 1'b0;
-		EXMEM_preg_misaligned <= 1'b0;
-		EXMEM_preg_addr_bits <= 2'b0;
+	   EXMEM_preg_mem <= 3'b1;
+	   EXMEM_preg_csr_addr <= 12'b0;
+	   {EXMEM_preg_pc, EXMEM_preg_aluout, EXMEM_preg_data2} <= 96'b0;
+	   EXMEM_preg_rd <= 5'b0;
+	   EXMEM_preg_imm <= 32'b0;
+	   EXMEM_preg_dummy <= 1'b1;
+	   EXMEM_preg_mret <= 1'b0;
+	   EXMEM_preg_misaligned <= 1'b0;
+	   EXMEM_preg_addr_bits <= 2'b0;
 	end
 
 	else
