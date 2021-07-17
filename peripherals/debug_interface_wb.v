@@ -1,17 +1,15 @@
-`timescale 1ns/1ps
-
 module debug_interface_wb(input         wb_cyc_i,
-                       input         wb_stb_i,
-                       input         wb_we_i,
-                       input [31:0]  wb_adr_i,
-                       input [31:0]  wb_dat_i,
-                       input [3:0]   wb_sel_i,
-                       output        wb_stall_o,
-                       output        wb_ack_o,
-                       output [31:0] wb_dat_o,
-                       output        wb_err_o,
-                       input         wb_rst_i,
-                       input         wb_clk_i);
+                          input         wb_stb_i,
+                          input         wb_we_i,
+                          input [31:0]  wb_adr_i,
+                          input [31:0]  wb_dat_i,
+                          input [3:0]   wb_sel_i,
+                          output        wb_stall_o,
+                          output        wb_ack_o,
+                          output [31:0] wb_dat_o,
+                          output        wb_err_o,
+                          input         wb_rst_i,
+                          input         wb_clk_i);
 
 assign wb_stall_o = 1'b0;
 assign wb_dat_o = 32'b0;
