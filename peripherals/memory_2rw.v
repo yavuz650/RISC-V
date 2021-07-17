@@ -1,4 +1,3 @@
-
 module memory_2rw(
 // Port 0: RW
     clk0,csb0,web0,wmask0,addr0,din0,dout0,
@@ -29,6 +28,12 @@ module memory_2rw(
 
 
 reg [DATA_WIDTH-1:0]    mem [0:RAM_DEPTH-1] /*verilator public*/;
+
+`ifdef FPGA_READMEM
+initial $readmemh("reset_handler.mem",mem,7424,7487);
+initial $readmemh("bootloader.mem",mem,7488,8191);
+`endif
+
   // Memory Write Block Port 0
   // Write Operation : When web0 = 0, csb0 = 0
   always @ (posedge clk0)
