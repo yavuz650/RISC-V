@@ -1,4 +1,3 @@
-
 module memory_2rw_wb(
 input         port0_wb_cyc_i,
 input         port0_wb_stb_i,
@@ -50,7 +49,7 @@ assign clk0 = port0_wb_clk_i;
 assign csb0 = ~port0_wb_stb_i;
 assign web0 = ~port0_wb_we_i;
 assign wmask0 = port0_wb_sel_i;
-assign addr0 = port0_wb_adr_i[12:2];
+assign addr0 = port0_wb_adr_i[ADDR_WIDTH+1 : 2];
 assign din0 = port0_wb_dat_i;
 assign port0_wb_dat_o = dout0;
 assign port0_wb_stall_o = 1'b0;
@@ -69,7 +68,7 @@ assign clk1 = port1_wb_clk_i;
 assign csb1 = ~port1_wb_stb_i;
 assign web1 = ~port1_wb_we_i;
 assign wmask1 = port1_wb_sel_i;
-assign addr1 = port1_wb_adr_i[12:2];
+assign addr1 = port1_wb_adr_i[ADDR_WIDTH+1 : 2];
 assign din1 = port1_wb_dat_i;
 assign port1_wb_dat_o = dout1;
 assign port1_wb_stall_o = 1'b0;
