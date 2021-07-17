@@ -4,8 +4,6 @@ This module is responsible for detecting data hazards that require pipeline stal
 A pipeline stall is necessary when the instruction right after a load instruction
 has a data dependency on the load instruction.
 */
-`timescale 1ns/10ps
-
 module hazard_detection_unit(input [4:0] rs1,
                              input [4:0] rs2,
                              input [4:0] opcode, //opcode is used to determine if the instruction needs rs1 and/or rs2.

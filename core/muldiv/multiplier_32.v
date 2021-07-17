@@ -1,6 +1,3 @@
-`timescale 1ns / 1ps
-
-
 module multiplier_32(
     input clk,
     input reset,

@@ -4,7 +4,6 @@ This module is responsible for handling traps. It contains the CSRs.
 The module utilizes a finite state machine to realize the task.
 */
 
-`timescale 1ns/1ps
 //bits in the CSRs
 `define mstatus_mie mstatus[3]
 `define mstatus_mpie mstatus[7]

@@ -1,5 +1,3 @@
-`timescale 1ns / 1ps
-
 module MULDIV_ctrl (
     input clk,
     input start,
