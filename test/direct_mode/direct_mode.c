@@ -27,7 +27,6 @@ void bubble_sort(int* arr, int len)
 
 int main() 
 {
-
     dum=0;
     SET_MTVEC_DIRECT_MODE();
     ENABLE_GLOBAL_IRQ();
@@ -38,12 +37,9 @@ int main()
     bubble_sort(unsorted_arr,7);
 
     int *addr_ptr = DEBUG_IF_ADDR;
-    if(!memcmp((char*) sorted_arr, (char*) unsorted_arr, 7))
+    if(!memcmp((char*) sorted_arr, (char*) unsorted_arr, 28))
     {
-        if(dum == 27)
-            *addr_ptr = 1; //success
-        else
-            *addr_ptr = 0; //failure
+        *addr_ptr = 1; //success
     }
     else
     {
