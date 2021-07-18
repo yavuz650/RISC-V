@@ -9,7 +9,7 @@ module fpga_top(input M100_clk_i,
                 output led1,led2,led3,led4);
 
 parameter SYS_CLK_FREQ = 50000000;
-parameter NUM_SLAVES = 4;
+parameter NUM_SLAVES = 5;
 
 wire loader_reset;
 wire [31:0] loader_reg_o;
