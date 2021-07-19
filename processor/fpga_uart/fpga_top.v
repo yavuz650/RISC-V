@@ -1,5 +1,4 @@
 `timescale 1ns/1ps
-`define FPGA_READMEM
 
 module fpga_top(input M100_clk_i,
                 input reset_i,
