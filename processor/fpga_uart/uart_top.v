@@ -10,16 +10,16 @@ module uart_top(input M100_clk_i,
 parameter SYS_CLK_FREQ = 50000000;
 
 wire clk_i, locked;
- clk_wiz_0 clkwiz0
- (
-  // Clock out ports
-         .clk_out1(clk_i),
-  // Status and control signals
-           .reset(1'b0),
-          .locked(locked),
- // Clock in ports
-           .clk_in1(M100_clk_i)
- );
+clk_wiz_0 clkwiz0
+(
+// Clock out ports
+       .clk_out1(clk_i),
+// Status and control signals
+       .reset(1'b0),
+       .locked(locked),
+// Clock in ports
+       .clk_in1(M100_clk_i)
+);
 
 wire [3:0] data_wmask;
 wire data_wen, mtip_o;

@@ -3,8 +3,6 @@ Control Unit
 This module is responsible for generating the necessary control signals for the core.
 */
 
-`timescale 1ns/1ps
-
 module control_unit(input [31:0] instr_i,
 
                     output reg muldiv_start,

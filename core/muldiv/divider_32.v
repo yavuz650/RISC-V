@@ -1,5 +1,3 @@
-`timescale 1ns / 1ps
-
 module divider_32(
 	input clk,
 	input start,

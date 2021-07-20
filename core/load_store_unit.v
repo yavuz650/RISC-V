@@ -1,5 +1,3 @@
-`timescale 1ns/1ps
-
 module load_store_unit(input [31:0] addr_i,
                        input [31:0] data_i,
                        input [1:0]  length_EX_i,

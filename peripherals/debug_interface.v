@@ -1,5 +1,3 @@
-
-
 module debug_interface(input         reset_i,
                        input         clk_i,
                        input         csb_i, //chip-select input

@@ -1,7 +1,7 @@
 #include "string.h"
 #define DEBUG_IF_ADDR 0x00002010
 
-void sorter(int* arr, int len)
+void bubble_sort(int* arr, int len)
 {
     int sort_num;
     do
@@ -23,12 +23,12 @@ void sorter(int* arr, int len)
 
 int main() 
 {
-    int myarr[] = {195,14,176,103,54,32,128};
-    int sorter_arr[] = {14,32,54,103,128,176,195};
-    sorter(myarr,7);
+    int unsorted_arr[] = {195,14,176,103,54,32,128};
+    int sorted_arr[] = {14,32,54,103,128,176,195};
+    bubble_sort(unsorted_arr,7);
 
     int *addr_ptr = DEBUG_IF_ADDR;
-    if(memcmp((char*) sorter_arr, (char*) myarr, 28) == 0)
+    if(memcmp((char*) sorted_arr, (char*) unsorted_arr, 28) == 0)
     {
         //success
         *addr_ptr = 1;
