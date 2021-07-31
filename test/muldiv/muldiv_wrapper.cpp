@@ -4,7 +4,6 @@
 #include "Vbarebones_wb_top.h"
 #include "Vbarebones_wb_top_barebones_wb_top.h"
 #include "Vbarebones_wb_top_memory_2rw_wb__Ab.h"
-#include "Vbarebones_wb_top_memory_2rw__Ab_R800.h"
 #include "verilated_vcd_c.h"
 
 Vbarebones_wb_top *barebones_wb_top;
@@ -22,7 +21,7 @@ int main(int argc, char** argv)
     int len = bin_file.tellg();
     bin_file.seekg(0,bin_file.beg);
 
-    bin_file.read(reinterpret_cast<char*>(barebones_wb_top->barebones_wb_top->memory->memory->mem),len);
+    bin_file.read(reinterpret_cast<char*>(barebones_wb_top->barebones_wb_top->memory->mem),len);
 
     barebones_wb_top->trace(tfp, 99);
     tfp->open("simx.vcd");
