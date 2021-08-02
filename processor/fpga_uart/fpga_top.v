@@ -4,8 +4,7 @@ module fpga_top(input M100_clk_i,
                 input reset_i,
                 input rx_i,
                 output tx_o,
-                output irq_ack_o,
-                output led1,led2,led3,led4);
+                output led1,led2,led4);
 
 parameter SYS_CLK_FREQ = 50000000;
 parameter NUM_SLAVES = 5;
@@ -13,6 +12,7 @@ parameter NUM_SLAVES = 5;
 wire loader_reset;
 wire [31:0] loader_reg_o;
 wire reset;
+wire irq_ack_o;
 
 wire clk_i, locked;
 clk_wiz_0 clkwiz0
@@ -285,6 +285,6 @@ loader_wb #(.SYS_CLK_FREQ(SYS_CLK_FREQ))
             .uart_rx_irq(rx_irq_o),
             .uart_rx_byte(rx_byte),
             .reset_o(loader_reset),
-            .led1(led1), .led2(led2), .led3(led3), .led4(led4));
+            .led1(led1), .led2(led2), .led4(led4));
 
 endmodule
