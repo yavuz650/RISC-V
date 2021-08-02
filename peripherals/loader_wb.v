@@ -16,7 +16,7 @@ module loader_wb(input         wb_cyc_i,
                  input       uart_rx_irq,
                  input [7:0] uart_rx_byte,
                  output reg reset_o,
-                 output led1, led2, led3, led4);
+                 output led1, led2, led4);
 
 parameter S0 = 0, S1 = 1, S2 = 2, S3 = 3, S4 = 4;
 parameter SYS_CLK_FREQ = 100000000;
@@ -30,7 +30,6 @@ reg stb;
 
 assign led1 = state == S0;
 assign led2 = state == S1;
-assign led3 = state == S2;
 assign led4 = state == S3;
 
 assign clk = wb_clk_i;
@@ -58,22 +57,19 @@ begin
 		state <= next_state;
 end
 
-always @(*)
+always @(posedge clk or negedge rst)
 begin
-	case(state)
-		S0: reset_o = 1'b1;
-		S1: reset_o = 1'b1;
-		S2: reset_o = 1'b0;
-		S3: reset_o = 1'b1;
-		S4:
-		begin
-			if(counter == 2*SYS_CLK_FREQ)
-				reset_o = 1'b0;
-			else
-				reset_o = 1'b1;
-		end
-		default: reset_o = 1'b1;
-	endcase
+	if(!rst)
+		reset_o <= 1'b1;
+	else
+	begin
+		if(state == S1 && uart_rx_irq && uart_rx_byte == 8'h70)
+		    reset_o <= 1'b0;
+		else if(state == S4 && counter == 2*SYS_CLK_FREQ)
+		    reset_o <= 1'b0;
+		else
+		    reset_o <= 1'b1;
+	end
 end
 
 always @(*)
