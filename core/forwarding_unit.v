@@ -13,13 +13,7 @@ module forwarding_unit(input [4:0] rs1,
                        input exmem_wb, memwb_wb,
 
                        output reg [1:0] mux1_ctrl, //control signal for mux2 in EX
-                       output reg [1:0] mux2_ctrl, //control signal for mux4 in EX
-
-                       //inputs and outputs for csr forwarding
-                       input [11:0] csr_addr_EX, csr_addr_MEM, csr_addr_WB,
-                       input        csr_wen_MEM, csr_wen_WB,
-
-                       output reg [1:0] mux3_ctrl); //control signal for mux8 in EX
+                       output reg [1:0] mux2_ctrl); //control signal for mux4 in EX
 
 always @(*)
 begin
@@ -70,18 +64,6 @@ begin
 		mux1_ctrl = 2'b0;
 		mux2_ctrl = 2'b10;
 	end
-end
-
-always @(*)
-begin
-	if(!csr_wen_MEM && csr_addr_EX == csr_addr_MEM)
-		mux3_ctrl = 2'd1;
-
-	else if(!csr_wen_WB && csr_addr_EX == csr_addr_WB)
-		mux3_ctrl = 2'd0;
-
-	else
-		mux3_ctrl = 2'd2;
 end
 
 endmodule
