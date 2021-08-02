@@ -9,10 +9,10 @@ module control_unit(input [31:0] instr_i,
                     output reg muldiv_sel,
                     output reg [1:0] op_mul,
                     output reg [1:0] op_div,
-                    output reg [3:0] ALU_func1,
-                    output reg [1:0] ALU_func2,
-                    output reg EX_mux5, EX_mux7,
-                    output reg [1:0] EX_mux1, EX_mux3, EX_mux6,
+                    output reg [3:0] ALU_func,
+                    output reg [1:0] CSR_ALU_func,
+                    output reg EX_mux1, EX_mux3, EX_mux5, EX_mux7, EX_mux8,
+                    output reg [1:0] EX_mux6,
                     output reg B, J,
                     output reg [1:0] MEM_len, //memory load-store length
                     output reg MEM_wen, WB_rf_wen, WB_csr_wen, //memory write enable, register file write enable, CSR unit write enable
@@ -23,10 +23,10 @@ module control_unit(input [31:0] instr_i,
                     output     mret_o);
 
 //mux input signals, do not override
-parameter data1_EX = 2'b0;
-parameter data2_EX = 2'b0;
-parameter imm_EX   = 2'b1;
-parameter pc_EX    = 2'b1;
+parameter data1_EX = 1'b0;
+parameter data2_EX = 1'b0;
+parameter imm_EX   = 1'b1;
+parameter pc_EX    = 1'b1;
 
 parameter aluout_MEM = 2'd0;
 parameter memout_MEM = 2'd1;
@@ -42,13 +42,15 @@ assign funct7 = instr_i[31:25];
 
 always @*
 begin
-    if(opcode == 7'b01100_11 && funct7 == 7'd1) begin
+    if(opcode == 7'b01100_11 && funct7 == 7'd1) 
+	begin
         muldiv_start = 1'b1;
         muldiv_sel = funct3[2];
         op_mul = funct3[1:0];
         op_div = funct3[1:0];
     end
-    else begin
+    else 
+	begin
         muldiv_start = 1'b0;
         muldiv_sel = 1'b0;
         op_mul = 2'b00;
@@ -69,22 +71,23 @@ begin
 			WB_sign = 1'b0;
 			MEM_len = 2'b0;
 			MEM_wen = 1'b1;
-			ALU_func2 = 2'b0;
+			CSR_ALU_func = 2'b0;
 			B = 1'b1;
 			J = 1'b0;
+			EX_mux8 = 2'd0;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 2'b00;
+			EX_mux6 = 2'b0;
 			EX_mux5 = 1'b1;
 			EX_mux3 = data2_EX;
 			EX_mux1 = data1_EX;
 			case(funct3)
-				3'b000: ALU_func1 = 4'b1010; //BEQ
-				3'b001: ALU_func1 = 4'b1011; //BNE
-				3'b100: ALU_func1 = 4'b0110; //BLT
-				3'b101: ALU_func1 = 4'b1101; //BGE
-				3'b110: ALU_func1 = 4'b0101; //BLTU
-				3'b111: ALU_func1 = 4'b1100; //BGEU
-				default: ALU_func1 = 4'b0000;
+				3'b000: ALU_func = 4'b1010; //BEQ
+				3'b001: ALU_func = 4'b1011; //BNE
+				3'b100: ALU_func = 4'b0110; //BLT
+				3'b101: ALU_func = 4'b1101; //BGE
+				3'b110: ALU_func = 4'b0101; //BLTU
+				3'b111: ALU_func = 4'b1100; //BGEU
+				default: ALU_func = 4'b0000;
 			endcase
 		end
 
@@ -97,15 +100,16 @@ begin
 			WB_sign = 1'b0;
 			MEM_len = 2'b0;
 			MEM_wen = 1'b1;
-			ALU_func2 = 2'b1;
+			CSR_ALU_func = 2'b0;
 			B = 1'b0;
 			J = 1'b0;
+			EX_mux8 = 2'd0;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 2'b00;
+			EX_mux6 = 2'b0;
 			EX_mux5 = 1'b0;
 			EX_mux3 = imm_EX;
 			EX_mux1 = pc_EX;
-			ALU_func1 = 4'b1111;
+			ALU_func = 4'b1111;
 		end
 
 		//AUIPC
@@ -117,15 +121,16 @@ begin
 			WB_sign = 1'b0;
 			MEM_len = 2'b0;
 			MEM_wen = 1'b1;
-			ALU_func2 = 2'b0;
+			CSR_ALU_func = 2'b0;
 			B = 1'b0;
 			J = 1'b0;
+			EX_mux8 = 2'd0;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 2'b00;
+			EX_mux6 = 2'b0;
 			EX_mux5 = 1'b0;
 			EX_mux3 = imm_EX;
 			EX_mux1 = pc_EX;
-			ALU_func1 = 4'b0000;
+			ALU_func = 4'b0000;
 		end
 
 		//JAL, JALR
@@ -137,14 +142,15 @@ begin
 			WB_sign = 1'b0;
 			MEM_len = 2'b0;
 			MEM_wen = 1'b1;
-			ALU_func2 = 2'b0;
+			CSR_ALU_func = 2'b0;
 			B = 1'b0;
 			J = 1'b1;
+			EX_mux8 = 2'd0;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 2'b00;
+			EX_mux6 = 2'b0;
 			EX_mux3 = data2_EX;
 			EX_mux1 = pc_EX;
-			ALU_func1 = 4'b1110;
+			ALU_func = 4'b1110;
 
 			case(opcode[3])
 				1'b1: EX_mux5 = 1'b1; //JAL
@@ -159,15 +165,16 @@ begin
 			WB_csr_wen = 1'b1;
 			WB_mux = memout_MEM;
 			MEM_wen = 1'b1;
-			ALU_func2 = 2'b0;
+			CSR_ALU_func = 2'b0;
 			B = 1'b0;
 			J = 1'b0;
+			EX_mux8 = 2'd0;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 2'b00;
+			EX_mux6 = 2'b0;
 			EX_mux5 = 1'b0;
 			EX_mux3 = imm_EX;
 			EX_mux1 = data1_EX;
-			ALU_func1 = 4'b0000;
+			ALU_func = 4'b0000;
 
 			case(funct3)
 				3'b000: begin WB_sign = 1'b1; MEM_len = 2'd0; end //LB
@@ -187,15 +194,16 @@ begin
 			WB_mux = aluout_MEM;
 			WB_sign = 1'b0;
 			MEM_wen = 1'b0;
-			ALU_func2 = 2'b0;
+			CSR_ALU_func = 2'b0;
 			B = 1'b0;
 			J = 1'b0;
+			EX_mux8 = 2'd0;
 			EX_mux7 = 1'b1;
-			EX_mux6 = 2'b00;
+			EX_mux6 = 2'b0;
 			EX_mux5 = 1'b0;
 			EX_mux3 = imm_EX;
 			EX_mux1 = data1_EX;
-			ALU_func1 = 4'b0000;
+			ALU_func = 4'b0000;
 
 			case(funct3)
 				3'b000: MEM_len = 2'd0; //SB
@@ -214,10 +222,11 @@ begin
 			WB_sign = 1'b0;
 			MEM_len = 2'b0;
 			MEM_wen = 1'b1;
-			ALU_func2 = 2'b0;
+			CSR_ALU_func = 2'b0;
 			B = 1'b0;
 			J = 1'b0;
 			EX_mux7 = 1'b1;
+			EX_mux8 = 2'd0;
 
 			//If the instruction is a MUL/DIV, choose the output from the MULDIV block.
 			if(funct7 == 7'd1 && opcode[5] == 1'b1)
@@ -237,25 +246,25 @@ begin
 				3'b000:
 				begin //ADD, ADDI, SUB
 					if(opcode[5]) //see if it is an add or a subtract
-						ALU_func1 = {3'b0,funct7[5]}; //ADD, SUB
+						ALU_func = {3'b0,funct7[5]}; //ADD, SUB
 				 	else
-				 		ALU_func1 = 4'b0; //ADDI
+				 		ALU_func = 4'b0; //ADDI
 				end
 
-				3'b001: ALU_func1 = 4'b0111; //SLL, SLLI
-				3'b010: ALU_func1 = 4'b0110; //SLT, SLTI
-				3'b011: ALU_func1 = 4'b0101; //SLTU, SLTIU
-				3'b100: ALU_func1 = 4'b0010; //XOR, XORI
+				3'b001: ALU_func = 4'b0111; //SLL, SLLI
+				3'b010: ALU_func = 4'b0110; //SLT, SLTI
+				3'b011: ALU_func = 4'b0101; //SLTU, SLTIU
+				3'b100: ALU_func = 4'b0010; //XOR, XORI
 				3'b101:
 				begin //SRA, SRAI, SRL, SRLI
 					if(funct7[5])
-						ALU_func1 = 4'b1001; //SRA, SRAI
+						ALU_func = 4'b1001; //SRA, SRAI
 					else
-						ALU_func1 = 4'b1000; //SRL, SRLI
+						ALU_func = 4'b1000; //SRL, SRLI
 				end
 
-				3'b110: ALU_func1 = 4'b0011; //OR, ORI
-				3'b111:	ALU_func1 = 4'b0100; //AND, ANDI
+				3'b110: ALU_func = 4'b0011; //OR, ORI
+				3'b111:	ALU_func = 4'b0100; //AND, ANDI
 			endcase
 		end
 
@@ -270,30 +279,27 @@ begin
 			MEM_wen = 1'b1;
 			B = 1'b0;
 			J = 1'b0;
+			EX_mux1 = 1'b0;
+			EX_mux3 = 1'b0;
 			EX_mux5 = 1'b0;
-			EX_mux6 = 2'b01;
+			EX_mux6 = 2'd1;
 			EX_mux7 = 1'b0;
-
-			case(funct3[2])
-				1'b0: begin EX_mux1 = data1_EX; EX_mux3 = 2'd2; end //register
-				1'b1: begin EX_mux1 = 2'd2; EX_mux3 = imm_EX; end //immediate
-			endcase
+			EX_mux8 = funct3[2];
+            ALU_func = 4'd0;
 
 			casez(funct3)
-				3'b001: begin ALU_func1 = 4'b1111; ALU_func2 = 2'b00; end //RW
-				3'b?10: begin ALU_func1 = 4'b0011; ALU_func2 = 2'b00; end //RS,RSI
-				3'b011: begin ALU_func1 = 4'b0100; ALU_func2 = 2'b01; end //RC
-				3'b101: begin ALU_func1 = 4'b1111; ALU_func2 = 2'b01; end //RWI
-				3'b111: begin ALU_func1 = 4'b0100; ALU_func2 = 2'b10; end //RCI
-				default: begin ALU_func1 = 4'b1111; ALU_func2 = 2'b00; end
+				3'b?01: CSR_ALU_func = 2'd0; //RW,RWI
+				3'b?10: CSR_ALU_func = 2'd1; //RS,RSI
+				3'b?11: CSR_ALU_func = 2'd2; //RC,RCI
+				default: CSR_ALU_func = 2'd0;
 			endcase
 
 		end
 
 		default: begin
-			ALU_func1 = 4'b0;
-			ALU_func2 = 2'b0;
-			{EX_mux5, EX_mux6, EX_mux7, EX_mux1, EX_mux3} = 8'b0;
+			ALU_func = 4'b0;
+			CSR_ALU_func = 2'b0;
+			{EX_mux5, EX_mux6, EX_mux7, EX_mux1, EX_mux3, EX_mux8} = 7'b0;
 			{B, J} = 2'b0;
 			MEM_len = 2'b0;
 			WB_mux = 2'b0;
