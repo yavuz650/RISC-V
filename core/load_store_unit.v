@@ -1,4 +1,7 @@
-module load_store_unit(input [31:0] addr_i,
+module load_store_unit(input clk_i,
+                       input reset_i,
+
+                       input [31:0] addr_i,
                        input [31:0] data_i,
                        input [1:0]  length_EX_i,
                        input        load_i,
@@ -16,6 +19,7 @@ module load_store_unit(input [31:0] addr_i,
                        output reg [31:0] memout_o);
 
 wire addr_misaligned;
+reg [31:0] addr_i_reg;
 //EX STAGE
 //see if the load/store address is misaligned and thus requires two seperate load/store operations
 assign addr_misaligned     = (length_EX_i == 2'd2 && addr_i[1:0] != 2'd0) ? 1'b1
@@ -25,7 +29,15 @@ assign addr_misaligned     = (length_EX_i == 2'd2 && addr_i[1:0] != 2'd0) ? 1'b1
 assign misaligned_access_o = (load_i | ~wen_i) & ~misaligned_EX_i & addr_misaligned; //the instruction must be a load or a store, and the address must be misaligned.
 
 //outputs to memory
-assign addr_o = misaligned_EX_i ? {addr_i[31:2],2'b0} + 32'd4 : {addr_i[31:2],2'b0};
+assign addr_o = misaligned_EX_i ? {addr_i_reg[31:2],2'b0} + 32'd4 : {addr_i[31:2],2'b0};
+
+always @(posedge clk_i or negedge reset_i) 
+begin
+    if(!reset_i)
+	    addr_i_reg <= 32'd0;
+	else
+	    addr_i_reg <= addr_i;	
+end
 
 always @(*)
 begin
@@ -53,8 +65,8 @@ begin
 
 		else
 		begin
-			wmask_o = 4'b1111 >> (3'd4 - {1'b0,addr_i[1:0]});
-			data_o = data_i >> 8*(3'd4 - {1'b0,addr_i[1:0]});
+			wmask_o = 4'b1111 >> (3'd4 - {1'b0,addr_i_reg[1:0]});
+			data_o = data_i >> 8*(3'd4 - {1'b0,addr_i_reg[1:0]});
 		end
 	end
 end
