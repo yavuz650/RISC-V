@@ -10,12 +10,12 @@ module divider_32(
 	wire [31:0] Q32;
 
 	//DividerBlock Signals
-	wire [1:0] A;
+	wire A;
 	wire [31:0] Rin, Rout, R;
-	wire [1:0] Q;
+	wire Q;
 
 	//Control Signals
-	wire [3:0] mux_A_sel;
+	wire [4:0] mux_A_sel;
 	wire mux_Rin_sel;
 	wire reg_Rin_en;
 	wire reg_Q_en;
@@ -29,23 +29,8 @@ module divider_32(
 
 	div_block div_block(A, divisor, Rin, Rout, Q);
 
-	assign A = mux_A_sel == 4'd0 ? dividend[31:30]
-			 : mux_A_sel == 4'd1 ? dividend[29:28]
-			 : mux_A_sel == 4'd2 ? dividend[27:26]
-			 : mux_A_sel == 4'd3 ? dividend[25:24]
-			 : mux_A_sel == 4'd4 ? dividend[23:22]
-			 : mux_A_sel == 4'd5 ? dividend[21:20]
-			 : mux_A_sel == 4'd6 ? dividend[19:18]
-			 : mux_A_sel == 4'd7 ? dividend[17:16]
-			 : mux_A_sel == 4'd8 ? dividend[15:14]
-			 : mux_A_sel == 4'd9 ? dividend[13:12]
-			 : mux_A_sel == 4'd10 ? dividend[11:10]
-			 : mux_A_sel == 4'd11 ? dividend[9:8]
-			 : mux_A_sel == 4'd12 ? dividend[7:6]
-			 : mux_A_sel == 4'd13 ? dividend[5:4]
-			 : mux_A_sel == 4'd14 ? dividend[3:2]
-			 : dividend[1:0];
-
+	assign A = dividend[31-mux_A_sel];
+	
 	assign Rin = mux_Rin_sel ? reg_R : 32'd0;
 
 	assign Q32 = reg_Q;
@@ -74,8 +59,8 @@ module divider_32(
                 	reg_R <= reg_R;
 
                 if (reg_Q_en == 1) begin
-                    reg_Q[31:2] <= reg_Q[29:0];
-                    reg_Q[1:0] <= Q;
+                    reg_Q[31:1] <= reg_Q[30:0];
+                    reg_Q[0] <= Q;
                 end else
                     reg_Q <= reg_Q;
             end
@@ -105,16 +90,13 @@ module div_array(
 endmodule
 
 module div_block(
-	input [1:0] A,
+	input A,
 	input [31:0] B,
 	input [31:0] Rin,
 	output [31:0] Rout,
-	output [1:0] Q);
+	output Q);
 
-	wire [31:0] r;
-
-	div_array row_0({Rin[30:0], A[1]}, B, r, Q[1]);
-	div_array row_1({r[30:0], A[0]}, B, Rout, Q[0]);
+    div_array row_0({Rin[30:0], A}, B, Rout, Q);
 
 endmodule
 
@@ -123,7 +105,7 @@ module div_control(
 	input start,
 	input clk,
 	input reset,
-	output reg [3:0] mux_A_sel,
+	output reg [4:0] mux_A_sel,
 	output reg mux_Rin_sel,
 	output reg reg_Rin_en,
 	output reg reg_Q_en,
@@ -133,7 +115,7 @@ module div_control(
 
 	reg current_state;
 	reg next_state;
-	reg [3:0] round_count;
+	reg [4:0] round_count;
 	reg start_count, rdy_b4_delay;
 
 	always @ (posedge clk or negedge reset) begin
@@ -149,13 +131,13 @@ module div_control(
 
 	always @ (posedge clk or negedge reset) begin
 		if(!reset)
-			round_count <= 4'b0;
+			round_count <= 5'b0;
 		else
 		begin
 			if(start_count)
 				round_count <= round_count + 1;
 			else
-				round_count <= 4'b0;			
+				round_count <= 5'b0;			
 		end
 	end
 
@@ -164,7 +146,7 @@ module div_control(
     	case(current_state)
 	    	R1: begin
 
-	       		mux_A_sel = 4'b0;
+	       		mux_A_sel = 5'b0;
 	           	mux_Rin_sel = 1'b0;
 	           	rdy_b4_delay = 1'b0;
 
@@ -184,7 +166,7 @@ module div_control(
 	       	end
 
 	       	Rounds: begin
-	       		if(round_count != 4'b1111) begin
+	       		if(round_count != 5'd31) begin
 
 			   		mux_A_sel = round_count;
 			   		start_count = 1'b1;
@@ -209,7 +191,7 @@ module div_control(
 
 	       	default: begin
 	           	next_state = R1;
-	           	mux_A_sel = 4'b0;
+	           	mux_A_sel = 5'b0;
 	           	rdy_b4_delay = 0;
 	           	mux_Rin_sel = 0;
 	           	reg_Rin_en = 0;
