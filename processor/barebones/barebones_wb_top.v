@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module barebones_wb_top(input clk_i,
                         input reset_i,
                         input meip_i,

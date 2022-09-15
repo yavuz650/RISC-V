@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module loader_wb(input         wb_cyc_i,
                  input         wb_stb_i,
                  input         wb_we_i,

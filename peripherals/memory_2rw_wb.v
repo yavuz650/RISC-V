@@ -1,3 +1,4 @@
+`timescale 1ns/1ps
 
 module memory_2rw_wb(
 input         port0_wb_cyc_i,
@@ -66,7 +67,7 @@ assign port0_wb_err_o = 1'b0;
 
 assign clk1 = port1_wb_clk_i;
 assign cs1 = ~port1_wb_stb_i;
-assign we1 = ~port1_wb_we_i;
+assign we1 = port1_wb_we_i;
 assign wmask1 = port1_wb_sel_i;
 assign addr1 = port1_wb_adr_i[ADDR_WIDTH+1 : 2];
 assign din1 = port1_wb_dat_i;
@@ -115,10 +116,10 @@ begin
 end
 
   // Memory Write Block Port 1
-  // Write Operation : When we1 = 0, cs1 = 0
+  // Write Operation : When we1 = 1, cs1 = 0
 always @ (posedge clk1)
 begin
-    if ( !cs1 && !we1 ) begin
+    if ( !cs1 && we1 ) begin
         if (wmask1[0])
             mem[addr1][7:0] = din1[7:0];
         if (wmask1[1])
@@ -131,10 +132,10 @@ begin
 end
 
   // Memory Read Block Port 1
-  // Read Operation : When we1 = 1, cs1 = 0
+  // Read Operation : When we1 = 0, cs1 = 0
 always @ (posedge clk1)
 begin : MEM_READ1
-    if (!cs1 && we1)
+    if (!cs1 && !we1)
         port1_wb_dat_o <= mem[addr1];
 end
 
