@@ -3,6 +3,8 @@ Immediate Decoder
 Generates immediate values as defined in the spec.
 */
 
+`timescale 1ns/1ps
+
 module imm_decoder(input [29:0] instr_in,
                    output reg [31:0] imm_out);
 

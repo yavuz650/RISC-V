@@ -2,13 +2,11 @@
 Control Unit
 This module is responsible for generating the necessary control signals for the core.
 */
+`timescale 1ns/1ps
 
 module control_unit(input [31:0] instr_i,
 
-                    output reg muldiv_start,
-                    output reg muldiv_sel,
-                    output reg [1:0] op_mul,
-                    output reg [1:0] op_div,
+                    output reg [3:0] muldiv_op,
                     output reg [3:0] ALU_func,
                     output reg [1:0] CSR_ALU_func,
                     output reg EX_mux1, EX_mux3, EX_mux5, EX_mux7, EX_mux8,
@@ -43,20 +41,9 @@ assign funct7 = instr_i[31:25];
 always @*
 begin
     if(opcode == 7'b01100_11 && funct7 == 7'd1) 
-	begin
-        muldiv_start = 1'b1;
-        muldiv_sel = funct3[2];
-        op_mul = funct3[1:0];
-        op_div = funct3[1:0];
-    end
+		muldiv_op = {1'b1, funct3[2:0]};
     else 
-	begin
-        muldiv_start = 1'b0;
-        muldiv_sel = 1'b0;
-        op_mul = 2'b00;
-        op_div = 2'b00;
-    end
-
+		muldiv_op = 3'd0;
 end
 
 always @*
@@ -70,7 +57,7 @@ begin
 			WB_mux = aluout_MEM;
 			WB_sign = 1'b0;
 			MEM_len = 2'b0;
-			MEM_wen = 1'b1;
+			MEM_wen = 1'b0;
 			CSR_ALU_func = 2'b0;
 			B = 1'b1;
 			J = 1'b0;
@@ -99,7 +86,7 @@ begin
 			WB_mux = imm_MEM;
 			WB_sign = 1'b0;
 			MEM_len = 2'b0;
-			MEM_wen = 1'b1;
+			MEM_wen = 1'b0;
 			CSR_ALU_func = 2'b0;
 			B = 1'b0;
 			J = 1'b0;
@@ -120,7 +107,7 @@ begin
 			WB_mux = aluout_MEM;
 			WB_sign = 1'b0;
 			MEM_len = 2'b0;
-			MEM_wen = 1'b1;
+			MEM_wen = 1'b0;
 			CSR_ALU_func = 2'b0;
 			B = 1'b0;
 			J = 1'b0;
@@ -141,7 +128,7 @@ begin
 			WB_mux = aluout_MEM;
 			WB_sign = 1'b0;
 			MEM_len = 2'b0;
-			MEM_wen = 1'b1;
+			MEM_wen = 1'b0;
 			CSR_ALU_func = 2'b0;
 			B = 1'b0;
 			J = 1'b1;
@@ -164,7 +151,7 @@ begin
 			WB_rf_wen = 1'b0;
 			WB_csr_wen = 1'b1;
 			WB_mux = memout_MEM;
-			MEM_wen = 1'b1;
+			MEM_wen = 1'b0;
 			CSR_ALU_func = 2'b0;
 			B = 1'b0;
 			J = 1'b0;
@@ -193,7 +180,7 @@ begin
 			WB_csr_wen = 1'b1;
 			WB_mux = aluout_MEM;
 			WB_sign = 1'b0;
-			MEM_wen = 1'b0;
+			MEM_wen = 1'b1;
 			CSR_ALU_func = 2'b0;
 			B = 1'b0;
 			J = 1'b0;
@@ -221,7 +208,7 @@ begin
 			WB_mux = aluout_MEM;
 			WB_sign = 1'b0;
 			MEM_len = 2'b0;
-			MEM_wen = 1'b1;
+			MEM_wen = 1'b0;
 			CSR_ALU_func = 2'b0;
 			B = 1'b0;
 			J = 1'b0;
@@ -276,7 +263,7 @@ begin
 			WB_mux = aluout_MEM;
 			WB_sign = 1'b0;
 			MEM_len = 2'b0;
-			MEM_wen = 1'b1;
+			MEM_wen = 1'b0;
 			B = 1'b0;
 			J = 1'b0;
 			EX_mux1 = 1'b0;
@@ -304,7 +291,7 @@ begin
 			MEM_len = 2'b0;
 			WB_mux = 2'b0;
 			WB_sign = 1'b0;
-			{MEM_wen,WB_rf_wen,WB_csr_wen} = 3'b111;
+			{MEM_wen,WB_rf_wen,WB_csr_wen} = 3'b011;
 		end
 
 	endcase

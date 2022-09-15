@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module load_store_unit(input clk_i,
                        input reset_i,
 
@@ -31,7 +33,7 @@ assign misaligned_access_o = (load_i | ~wen_i) & ~misaligned_EX_i & addr_misalig
 //outputs to memory
 assign addr_o = misaligned_EX_i ? {addr_i_reg[31:2],2'b0} + 32'd4 : {addr_i[31:2],2'b0};
 
-always @(posedge clk_i or negedge reset_i) 
+always @(posedge clk_i) 
 begin
     if(!reset_i)
 	    addr_i_reg <= 32'd0;

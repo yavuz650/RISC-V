@@ -94,7 +94,7 @@ end
 
 assign data_wb_cyc_o = data_req_o | data_cyc;
 assign data_wb_stb_o = data_req_o;
-assign data_wb_we_o  = ~data_wen_o;
+assign data_wb_we_o  = data_wen_o;
 assign data_wb_adr_o = data_addr_o;
 assign data_wb_dat_o = data_o;
 assign data_wb_sel_o = data_wmask_o;

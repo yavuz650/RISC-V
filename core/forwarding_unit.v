@@ -6,6 +6,8 @@ It can forward data from MEM or the WB stage to EX stage, when necessary.
 It is also responsible for the forwarding of the CSRs.
 */
 
+`timescale 1ns/1ps
+
 module forwarding_unit(input [4:0] rs1,
                        input [4:0] rs2,
                        input [4:0] exmem_rd,

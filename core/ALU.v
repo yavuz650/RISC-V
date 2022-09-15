@@ -3,6 +3,8 @@ Arithmetic Logic Unit for the core.
 This module is responsible for the execution of arithmetic operations.
 */
 
+`timescale 1ns/1ps
+
 module ALU(input [31:0] src1,
            input [31:0] src2,
            input [3:0]  func,

@@ -4,6 +4,10 @@ This module is responsible for handling traps. It contains the CSRs.
 The module utilizes a finite state machine to realize the task.
 */
 
+/* verilator lint_off UNOPTFLAT */
+
+`timescale 1ns/1ps
+
 //bits in the CSRs
 `define mstatus_mie mstatus[3]
 `define mstatus_mpie mstatus[7]
@@ -91,7 +95,7 @@ assign csr_mem_flush_o = csr_mem_flush;
 assign mepc_o = mepc;
 
 //state transitions are done on the rising edge
-always @(posedge clk_i or negedge reset_i)
+always @(posedge clk_i)
 begin
     if(!reset_i)
     begin
@@ -196,7 +200,7 @@ begin
     end
 end
 
-always @(posedge clk_i or negedge reset_i)
+always @(posedge clk_i)
 begin
     if(!reset_i)
         csr_reg_o <= 32'b0;
@@ -230,19 +234,63 @@ begin
 end
 
 //Priority Encoder for fast interrupts.
+/*
 always @(*)
-begin
-    fast_irq_index = 5'd15;
-    PE_valid = 1'b0;
-    while(fast_irq_index != 5'd31 && PE_valid != 1'b1)
+begin   
+    if(fast_irq_index != 5'd31 && PE_valid != 1'b1)
     begin
         fast_irq_index = fast_irq_index + 5'd1;
         PE_valid = masked_irq[fast_irq_index];
     end
+    else
+    begin
+        fast_irq_index = 5'd15;
+        PE_valid = 1'b0;
+    end
+end
+*/
+always @(*)
+begin
+    if(masked_irq[15] == 1)
+        fast_irq_index = 5'd15;
+    else if(masked_irq[16] == 1)
+        fast_irq_index = 5'd16;
+    else if(masked_irq[17] == 1)
+        fast_irq_index = 5'd17;
+    else if(masked_irq[18] == 1)
+        fast_irq_index = 5'd18;
+    else if(masked_irq[19] == 1)
+        fast_irq_index = 5'd19;
+    else if(masked_irq[20] == 1)
+        fast_irq_index = 5'd20;
+    else if(masked_irq[21] == 1)
+        fast_irq_index = 5'd21;
+    else if(masked_irq[22] == 1)
+        fast_irq_index = 5'd22;
+    else if(masked_irq[23] == 1)
+        fast_irq_index = 5'd23;
+    else if(masked_irq[24] == 1)
+        fast_irq_index = 5'd24;
+    else if(masked_irq[25] == 1)
+        fast_irq_index = 5'd25;
+    else if(masked_irq[26] == 1)
+        fast_irq_index = 5'd26;
+    else if(masked_irq[27] == 1)
+        fast_irq_index = 5'd27;
+    else if(masked_irq[28] == 1)
+        fast_irq_index = 5'd28;
+    else if(masked_irq[29] == 1)
+        fast_irq_index = 5'd29;
+    else if(masked_irq[30] == 1)
+        fast_irq_index = 5'd30;
+    else if(masked_irq[31] == 1)
+        fast_irq_index = 5'd31;
+    else
+        fast_irq_index = fast_irq_index;           
 end
 
 integer i;
-always @(posedge clk_i or negedge reset_i)
+always @(posedge clk_i)
 begin
     if(!reset_i)
         mip <= 32'b0;
@@ -263,7 +311,7 @@ begin
 end
 
 //CSR assignments
-always @(posedge clk_i or negedge reset_i)
+always @(posedge clk_i)
 begin
     if(!reset_i)
     begin

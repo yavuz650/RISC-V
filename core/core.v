@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module core(input reset_i, //active-low reset
 
             input clk_i,
@@ -38,18 +40,20 @@ reg        IFID_preg_dummy; //indicates if the instruction in the ID stage is du
 //END IF SIGNALS--------END IF SIGNALS--------END IF SIGNALS--------END IF SIGNALS--------END IF SIGNALS--------END IF SIGNALS
 
 //ID SIGNALS--------ID SIGNALS--------ID SIGNALS--------ID SIGNALS--------ID SIGNALS--------ID SIGNALS--------ID SIGNALS
+//MULDIV signals
+wire [31:0] X_i_ID, Y_i_ID;
+wire [31:0] div_exception_result_ID;
+wire div_exception_ID;
+
 wire [4:0]  rs1_ID, rs2_ID, rd_ID; //register addresses
 wire [31:0] data1_ID, data2_ID;
 wire [11:0] csr_addr_ID; //CSR register address
 wire        csr_wen_ID;
 wire        mret_ID; //driven high when the instruction in ID stage is MRET.
 wire        stall_ID;
-//control unit outputs
-wire ctrl_unit_muldiv_start;
-wire ctrl_unit_muldiv_sel;
-wire [1:0] ctrl_unit_op_mul;
-wire [1:0] ctrl_unit_op_div;
 
+//control unit outputs
+wire [3:0] ctrl_unit_muldiv_op;
 wire [3:0] ctrl_unit_alu_func;
 wire [1:0] ctrl_unit_csr_alu_func;
 wire       ctrl_unit_ex_mux1, ctrl_unit_ex_mux3, ctrl_unit_ex_mux5, ctrl_unit_ex_mux7, ctrl_unit_ex_mux8;
@@ -64,18 +68,19 @@ wire       ctrl_unit_illegal_instr, ctrl_unit_ecall, ctrl_unit_ebreak;
 wire        mux_ctrl_ID; //control signal for all three muxes
 wire [6:0]  mux1_o_ID; //WB field
 wire [2:0]  mux2_o_ID; //MEM field
-wire [20:0] mux3_o_ID; //EX field
+wire [14:0] mux3_o_ID; //EX field
 
 wire [29:0] imm_dec_i; //immediate decoder input
 wire [31:0] imm_dec_o; //immediate decoder output
 wire [31:0] pc_ID; //pc value
 
 //pipeline registers
+reg [6:0]  IDEX_preg_muldiv;
 reg [31:0] IDEX_preg_imm;
 reg [4:0]  IDEX_preg_rd, IDEX_preg_rs2, IDEX_preg_rs1;
 reg [31:0] IDEX_preg_data2, IDEX_preg_data1;
 reg [31:0] IDEX_preg_pc;
-reg [20:0] IDEX_preg_ex;
+reg [14:0] IDEX_preg_ex;
 reg [2:0]  IDEX_preg_mem;
 reg [6:0]  IDEX_preg_wb;
 reg [11:0] IDEX_preg_csr_addr;
@@ -87,17 +92,21 @@ reg [31:0] register_bank [31:0]; //32x32 register file
 //END ID SIGNALS--------END ID SIGNALS--------END ID SIGNALS--------END ID SIGNALS--------END ID SIGNALS--------END ID SIGNALS
 
 //EX SIGNALS--------EX SIGNALS--------EX SIGNALS--------EX SIGNALS--------EX SIGNALS--------EX SIGNALS--------EX SIGNALS
-wire muldiv_start;
-wire muldiv_sel;
-wire [1:0] op_mul, op_div;
-wire muldiv_done_EX;
-wire [31:0] R_EX;
-wire muldiv_stall_EX;
+wire [31:0] X_o_EX, Y_o_EX;
+
+wire [3:0] muldiv_op_EX;
+wire div_done_EX;
+wire [63:0] QR_EX;
+wire [127:0] PPs_EX, PQR_EX;
+
+wire div_exception_EX;
+wire [31:0] div_exception_result_EX;
+wire div_stall_EX;
 
 //signals from previous stage
 wire [6:0]  wb_EX;
 wire [2:0]  mem_EX;
-wire [20:0] ex_EX;
+wire [14:0] ex_EX;
 wire [31:0] pc_EX, data1_EX, data2_EX, imm_EX;
 wire [4:0]  rs1_EX, rs2_EX, rd_EX;
 wire [11:0] csr_addr_EX;
@@ -125,6 +134,8 @@ wire [31:0] branch_addr_calc; //intermediate value during address calculation.
 wire        take_branch; //branch decision signal. 1 if the branch is taken, 0 otherwise.
 
 //pipeline registers
+reg [127:0] EXMEM_preg_PQR;
+reg [6:0]  EXMEM_preg_muldiv;
 reg [31:0] EXMEM_preg_imm;
 reg [4:0]  EXMEM_preg_rd;
 reg [31:0] EXMEM_preg_data2;
@@ -140,6 +151,12 @@ reg [1:0]  EXMEM_preg_addr_bits; //two least-significant bits of data address.
 //END EX SIGNALS--------END EX SIGNALS--------END EX SIGNALS--------END EX SIGNALS--------END EX SIGNALS--------END EX SIGNALS
 
 //MEM SIGNALS--------MEM SIGNALS--------MEM SIGNALS--------MEM SIGNALS--------MEM SIGNALS--------MEM SIGNALS--------MEM SIGNALS
+wire [6:0] muldiv_MEM;
+wire div_exception_MEM;
+wire [31:0] div_exception_result_MEM;
+wire [63:0] PQR_MEM;
+wire [63:0] P_MEM; 
+
 //signals from previous stage
 wire [6:0]  wb_MEM;
 wire [2:0]  mem_MEM;
@@ -154,6 +171,8 @@ wire [1:0]  addr_bits_MEM; //two least-significant bits of data address, from pr
 
 wire [31:0] memout; //output of load-store unit
 //pipeline registers
+reg [63:0] MEMWB_preg_PQR;
+reg [6:0]  MEMWB_preg_muldiv;
 reg [4:0]  MEMWB_preg_rd;
 reg [31:0] MEMWB_preg_memout;
 reg [31:0] MEMWB_preg_aluout, MEMWB_preg_imm;
@@ -165,6 +184,8 @@ reg        MEMWB_preg_misaligned;
 
 //WB SIGNALS--------WB SIGNALS--------WB SIGNALS--------WB SIGNALS--------WB SIGNALS--------WB SIGNALS--------WB SIGNALS
 //signals from previous stage
+wire [63:0] PQR_WB;
+wire [31:0] MULDIV_result_WB;
 wire [4:0]  rd_WB;
 wire [6:0]  wb_WB;
 wire        load_sign;
@@ -194,7 +215,7 @@ assign csr_stall = !csr_wen_ID &&
                    (csr_addr_ID == csr_addr_MEM && !csr_wen_MEM) ||
                    (csr_addr_ID == csr_addr_WB && !csr_wen_WB));
 
-always @(posedge clk_i or negedge reset_i)
+always @(posedge clk_i)
 begin
 	if(!reset_i)
 		csr_pc_input <= 32'b0;
@@ -226,7 +247,7 @@ csr_unit CSR_UNIT(.clk_i(clk_i),
                   .mux1_ctrl_o(mux1_ctrl_IF),
                   .mux2_ctrl_o(mux4_ctrl_IF),
                   .ack_o(irq_ack_o),
-                  .mem_wen_i(mem_MEM[0]),
+                  .mem_wen_i(~mem_MEM[0]),
                   .ex_dummy_i(IDEX_preg_dummy),
                   .mem_dummy_i(EXMEM_preg_dummy),
                   .csr_if_flush_o(csr_if_flush),
@@ -250,9 +271,9 @@ assign mux4_o_IF = mux4_ctrl_IF ? mux3_o_IF : mux1_o_IF;
 assign pc_i = reset_i ? mux4_o_IF : reset_vector;
 assign instr_addr_o = pc_i;
 
-assign stall_IF = hazard_stall | muldiv_stall_EX | misaligned_access | data_stall_i | csr_stall;
+assign stall_IF = hazard_stall | div_stall_EX | misaligned_access | data_stall_i | csr_stall;
 
-always @(posedge clk_i or negedge reset_i)
+always @(posedge clk_i)
 begin
 	if(!reset_i)
 	begin
@@ -300,7 +321,7 @@ assign pc_ID        = IFID_preg_pc;
 assign imm_dec_i    = IFID_preg_instr[31:2];
 assign csr_addr_ID  = IFID_preg_instr[31:20];
 //assign nets
-assign stall_ID = hazard_stall | muldiv_stall_EX | misaligned_access | data_stall_i | csr_stall; //TODO: move csr stall below
+assign stall_ID = hazard_stall | div_stall_EX | misaligned_access | data_stall_i | csr_stall; //TODO: move csr stall below
 assign mux_ctrl_ID = hazard_stall;
 assign csr_wen_ID = ctrl_unit_wb_csr_wen;
 
@@ -310,13 +331,9 @@ assign mux1_o_ID    = mux_ctrl_ID ? 7'h0c : {ctrl_unit_wb_mux,
                                              ctrl_unit_wb_csr_wen,
                                              ctrl_unit_mem_len};
 
-assign mux2_o_ID    = mux_ctrl_ID ? 3'b1 : {ctrl_unit_mem_len, ctrl_unit_mem_wen};
+assign mux2_o_ID    = mux_ctrl_ID ? 3'b0 : {ctrl_unit_mem_len, ctrl_unit_mem_wen};
 
-assign mux3_o_ID    = mux_ctrl_ID ? 21'b0 : {ctrl_unit_op_div,
-                                             ctrl_unit_op_mul,
-                                             ctrl_unit_muldiv_sel,
-                                             ctrl_unit_muldiv_start,
-                                             ctrl_unit_B,
+assign mux3_o_ID    = mux_ctrl_ID ? 20'b0 : {ctrl_unit_B,
                                              ctrl_unit_J,
                                              ctrl_unit_ex_mux8,
                                              ctrl_unit_ex_mux7,
@@ -327,10 +344,10 @@ assign mux3_o_ID    = mux_ctrl_ID ? 21'b0 : {ctrl_unit_op_div,
                                              ctrl_unit_csr_alu_func,
                                              ctrl_unit_alu_func};
 
-control_unit    CTRL_UNIT   (.muldiv_start(ctrl_unit_muldiv_start),
-                             .muldiv_sel(ctrl_unit_muldiv_sel),
-                             .op_mul(ctrl_unit_op_mul),
-                             .op_div(ctrl_unit_op_div),
+assign X_i_ID = register_bank[rs1_ID];
+assign Y_i_ID = register_bank[rs2_ID];                                           
+
+control_unit    CTRL_UNIT   (.muldiv_op(ctrl_unit_muldiv_op),
                              .instr_i(IFID_preg_instr),
                              .ALU_func(ctrl_unit_alu_func),
                              .CSR_ALU_func(ctrl_unit_csr_alu_func),
@@ -355,9 +372,19 @@ control_unit    CTRL_UNIT   (.muldiv_start(ctrl_unit_muldiv_start),
 
 imm_decoder     IMM_DEC	    (.instr_in(imm_dec_i), .imm_out(imm_dec_o));
 
+/*
+MD_in           MD_in       (.X_i(X_i_ID),
+                             .Y_i(Y_i_ID),
+                             .md_op_i({1'b0, ctrl_unit_muldiv_op[2:0]}),
+                             .X_o(X_o_ID),
+                             .Y_o(Y_o_ID),
+                             .d_exception_result_o(div_exception_result_ID),
+                             .d_exception_o(div_exception_ID));
+                             */
+
 //write to register file
 integer i;
-always @(negedge clk_i or negedge reset_i)
+always @(negedge clk_i)
 begin
 	if(!reset_i)
 	begin
@@ -369,14 +396,15 @@ begin
 		register_bank[rd_WB] <= mux_o_WB;
 end
 
-always @(posedge clk_i or negedge reset_i)
+always @(posedge clk_i)
 begin
 	if(!reset_i)
 	begin
-		IDEX_preg_wb <= 7'h0c;
-		IDEX_preg_mem <= 3'b1;
+		IDEX_preg_muldiv <= 7'd0;
+        IDEX_preg_wb <= 7'h0c;
+		IDEX_preg_mem <= 3'b0;
 		IDEX_preg_csr_addr <= 12'b0;
-		IDEX_preg_ex <= 21'b0;
+		IDEX_preg_ex <= 15'b0;
 		{IDEX_preg_pc, IDEX_preg_data1, IDEX_preg_data2} <= 96'b0;
 		{IDEX_preg_rs1, IDEX_preg_rs2, IDEX_preg_rd} <= 15'b0;
 		IDEX_preg_imm  <= 32'b0;
@@ -387,10 +415,11 @@ begin
 
 	else if(take_branch || csr_id_flush) //flush the pipe
 	begin
-		IDEX_preg_wb <= 7'h0c;
-		IDEX_preg_mem <= 3'b1;
+		IDEX_preg_muldiv <= 7'd0;
+        IDEX_preg_wb <= 7'h0c;
+		IDEX_preg_mem <= 3'b0;
 		IDEX_preg_csr_addr <= 12'b0;
-		IDEX_preg_ex <= 21'b0;
+		IDEX_preg_ex <= 15'b0;
 		{IDEX_preg_pc, IDEX_preg_data1, IDEX_preg_data2} <= 96'b0;
 		{IDEX_preg_rs1, IDEX_preg_rs2, IDEX_preg_rd} <= 15'b0;
 		IDEX_preg_imm  <= 32'b0;
@@ -404,12 +433,12 @@ begin
         if(IDEX_preg_rs1 == 5'b0)
 			IDEX_preg_data1 <= 32'b0;
 		else
-			IDEX_preg_data1 <= register_bank[IDEX_preg_rs1];
+			IDEX_preg_data1 <= IDEX_preg_data1;
 
 		if(IDEX_preg_rs2 == 5'b0)
 			IDEX_preg_data2 <= 32'b0;
 		else
-			IDEX_preg_data2 <= register_bank[IDEX_preg_rs2];
+			IDEX_preg_data2 <= IDEX_preg_data1;
 
         if(misaligned_access)
             IDEX_preg_misaligned <= 1'b1;
@@ -421,7 +450,7 @@ begin
         if(stall_ID)
         begin
             IDEX_preg_wb <= 7'h0c;
-            IDEX_preg_mem <= 3'b1;
+            IDEX_preg_mem <= 3'b0;
             IDEX_preg_misaligned <= 1'b0;
             IDEX_preg_dummy <= 1'b1;
             IDEX_preg_rd <= 5'b0;
@@ -429,6 +458,7 @@ begin
 
         else
         begin
+            IDEX_preg_muldiv <= {3'b0, ctrl_unit_muldiv_op};
             IDEX_preg_imm <= imm_dec_o;
             IDEX_preg_rd  <= rd_ID;
             IDEX_preg_rs2 <= rs2_ID;
@@ -445,12 +475,12 @@ begin
             if(rs1_ID == 5'b0)
                 IDEX_preg_data1 <= 32'b0;
             else
-                IDEX_preg_data1 <= register_bank[rs1_ID];
+                IDEX_preg_data1 <= X_i_ID;
 
             if(rs2_ID == 5'b0)
                 IDEX_preg_data2 <= 32'b0;
             else
-                IDEX_preg_data2 <= register_bank[rs2_ID];
+                IDEX_preg_data2 <= Y_i_ID;
         end
     end
 end
@@ -459,27 +489,35 @@ end
 
 //EX STAGE---------------------------------------------------------------------------------
 
-//instantiate MULDIV
-MULDIV_top MULDIV(.clk(clk_i),
-                  .start(muldiv_start),
-                  .reset(reset_i),
-                  .in_A(mux2_o_EX),
-                  .in_B(mux4_o_EX),
-                  .op_div(op_div),
-                  .op_mul(op_mul),
-                  .muldiv_sel(muldiv_sel),
-                  .R(R_EX),
-                  .muldiv_done(muldiv_done_EX));
+//instantiate MULDIV input module
+MD_in           MD_in       (.X_i(mux1_o_EX),
+                             .Y_i(mux3_o_EX),
+                             .md_op_i({1'b0, muldiv_op_EX[2:0]}),
+                             .X_o(X_o_EX),
+                             .Y_o(Y_o_EX),
+                             .d_exception_result_o(div_exception_result_EX),
+                             .d_exception_o(div_exception_EX));
+//instantiate MUL and DIV
+M_1 # (.DATA_WIDTH(32)) 
+MUL_1 (.X_i(X_o_EX),
+       .Y_i(Y_o_EX),
+       .PPs_o(PPs_EX)
+       );
 
-assign muldiv_stall_EX = muldiv_start & ~muldiv_done_EX;
+D   # (.DATA_WIDTH(32))
+DIV   (.clk_i(clk_i),
+       .reset_i(reset_i),
+       .start_i((muldiv_op_EX[3] & muldiv_op_EX[2]) & ~div_exception_EX),
+       .X_i(X_o_EX),
+       .Y_i(Y_o_EX),
+       .rdy_o(div_done_EX),
+       .QR_o(QR_EX)
+       );
 
-hazard_detection_unit HZRD_DET_UNIT (.rs1(rs1_ID),
-                                     .rs2(rs2_ID),
-                                     .opcode(IFID_preg_instr[6:2]),
-                                     .funct3(IFID_preg_instr[14]),
-                                     .rd_EX(rd_EX),
-                                     .L_EX(L),
-                                     .hazard_stall(hazard_stall));
+assign div_stall_EX = (muldiv_op_EX[3] & muldiv_op_EX[2]) & ~div_done_EX & ~div_exception_EX;
+assign PQR_EX = div_exception_EX ? {{96{1'b0}}, div_exception_result_EX} : 
+                muldiv_op_EX[2] ? {{64{1'b0}}, QR_EX} : PPs_EX;
+
 //assign fields
 assign wb_EX    = IDEX_preg_wb;
 assign mem_EX   = IDEX_preg_mem;
@@ -493,24 +531,22 @@ assign rd_EX    = IDEX_preg_rd;
 assign imm_EX   = IDEX_preg_imm;
 assign csr_addr_EX = IDEX_preg_csr_addr;
 //assign nets
-assign alu_func     = ex_EX[3:0];
-assign csr_alu_func = ex_EX[5:4];
-assign mux1_ctrl_EX = ex_EX[6];
-assign mux3_ctrl_EX = ex_EX[7];
-assign mux5_ctrl_EX = ex_EX[8];
-assign mux6_ctrl_EX = ex_EX[10:9];
-assign mux7_ctrl_EX = ex_EX[11];
-assign mux8_ctrl_EX = ex_EX[12];
-assign J            = ex_EX[13]; //jump
-assign B            = ex_EX[14]; //branch
-assign muldiv_start = ex_EX[15];
-assign muldiv_sel   = ex_EX[16];
-assign op_mul       = ex_EX[18:17];
-assign op_div       = ex_EX[20:19];
-assign L            = (!wb_EX[3] && wb_EX[6:5] == 2'b1) ? 1'b1 : 1'b0; //load
-assign mem_wen_EX   = muldiv_stall_EX ? 1'b1 : (csr_ex_flush ? 1'b1 : mem_EX[0]);
+assign muldiv_op_EX     = IDEX_preg_muldiv[3:0];
+
+assign alu_func      = ex_EX[3:0];
+assign csr_alu_func  = ex_EX[5:4];
+assign mux1_ctrl_EX  = ex_EX[6];
+assign mux3_ctrl_EX  = ex_EX[7];
+assign mux5_ctrl_EX  = ex_EX[8];
+assign mux6_ctrl_EX  = ex_EX[10:9];
+assign mux7_ctrl_EX  = ex_EX[11];
+assign mux8_ctrl_EX  = ex_EX[12];
+assign J             = ex_EX[13]; //jump
+assign B             = ex_EX[14]; //branch
+assign L             = (!wb_EX[3] && wb_EX[6:5] == 2'b1) ? 1'b1 : 1'b0; //load
+assign mem_wen_EX    = div_stall_EX ? 1'b0 : (csr_ex_flush ? 1'b0 : mem_EX[0]);
 assign mem_length_EX = mem_EX[2:1];
-assign csr_wen_EX = wb_EX[2];
+assign csr_wen_EX    = wb_EX[2];
 
 //muxes
 assign mux1_o_EX = mux1_ctrl_EX ? pc_EX : mux2_o_EX;
@@ -526,7 +562,7 @@ assign mux4_o_EX = mux4_ctrl_EX == 2'b10 ? data2_EX
                  : aluout_MEM;
 
 assign mux5_o_EX = mux5_ctrl_EX ? pc_EX	 : mux2_o_EX;
-assign mux6_o_EX = mux6_ctrl_EX[1] ? R_EX : (mux6_ctrl_EX[0] ? csr_reg_out : aluout_EX);
+assign mux6_o_EX = mux6_ctrl_EX[0] ? csr_reg_out : aluout_EX;
 assign mux7_o_EX = mux7_ctrl_EX ? imm_EX : csr_alu_out;
 
 assign mux8_o_EX = mux8_ctrl_EX ? imm_EX : mux2_o_EX;
@@ -534,6 +570,15 @@ assign mux8_o_EX = mux8_ctrl_EX ? imm_EX : mux2_o_EX;
 assign csr_alu_out = csr_alu_func == 2'd0 ? mux8_o_EX
                    : csr_alu_func == 2'd1 ? csr_reg_out | mux8_o_EX
                    : csr_reg_out & ~mux8_o_EX;
+
+//instantiate the hazard unit.
+hazard_detection_unit HZRD_DET_UNIT (.rs1(rs1_ID),
+                                     .rs2(rs2_ID),
+                                     .opcode(IFID_preg_instr[6:2]),
+                                     .funct3(IFID_preg_instr[14]),
+                                     .rd_EX(rd_EX),
+                                     .L_EX(L | muldiv_op_EX[3]),
+                                     .hazard_stall(hazard_stall));
 
 //instantiate the forwarding unit.
 forwarding_unit FWD_UNIT(.rs1(rs1_EX),
@@ -544,6 +589,7 @@ forwarding_unit FWD_UNIT(.rs1(rs1_EX),
                          .memwb_wb(rf_wen_WB),
                          .mux1_ctrl(mux2_ctrl_EX),
                          .mux2_ctrl(mux4_ctrl_EX));
+
 //instantiate the ALU
 ALU ALU (.src1(mux1_o_EX), 
          .src2(mux3_o_EX), 
@@ -556,14 +602,16 @@ assign branch_addr_calc = mux5_o_EX + imm_EX;
 assign branch_target_addr[31:1] = branch_addr_calc[31:1];
 assign branch_target_addr[0] = (!mux5_ctrl_EX & J) ? 1'b0 : branch_addr_calc[0]; //clear the least-significant bit if the instruction is JALR.
 assign instr_addr_misaligned = take_branch & (branch_target_addr[1:0] != 2'd0);
-assign stall_EX = muldiv_stall_EX | data_stall_i;
+assign stall_EX = div_stall_EX | data_stall_i;
 
-always @(posedge clk_i or negedge reset_i) //clock the outputs to the pipeline register
+always @(posedge clk_i) //clock the outputs to the pipeline register
 begin
 	if(!reset_i)
 	begin
-		EXMEM_preg_wb <= 7'h0c;
-		EXMEM_preg_mem <= 3'b1;
+		EXMEM_preg_muldiv <= 7'd0;
+        EXMEM_preg_PQR <= 128'd0;
+        EXMEM_preg_wb <= 7'h0c;
+		EXMEM_preg_mem <= 3'b0;
 		EXMEM_preg_csr_addr <= 12'b0;
 		{EXMEM_preg_pc, EXMEM_preg_aluout, EXMEM_preg_data2} <= 96'b0;
 		EXMEM_preg_rd <= 5'b0;
@@ -576,20 +624,24 @@ begin
 
 	else if(stall_EX || csr_ex_flush)
 	begin
-	   EXMEM_preg_wb <= 7'h0c;
-	   EXMEM_preg_mem <= 3'b1;
-	   EXMEM_preg_csr_addr <= 12'b0;
-	   {EXMEM_preg_pc, EXMEM_preg_aluout, EXMEM_preg_data2} <= 96'b0;
-	   EXMEM_preg_rd <= 5'b0;
-	   EXMEM_preg_imm <= 32'b0;
-	   EXMEM_preg_dummy <= 1'b1;
-	   EXMEM_preg_mret <= 1'b0;
-	   EXMEM_preg_misaligned <= 1'b0;
-	   EXMEM_preg_addr_bits <= 2'b0;
+	   	EXMEM_preg_muldiv <= 7'd0;
+        EXMEM_preg_PQR <= 128'd0;
+        EXMEM_preg_wb <= 7'h0c;
+        EXMEM_preg_mem <= 3'b0;
+        EXMEM_preg_csr_addr <= 12'b0;
+        {EXMEM_preg_pc, EXMEM_preg_aluout, EXMEM_preg_data2} <= 96'b0;
+        EXMEM_preg_rd <= 5'b0;
+        EXMEM_preg_imm <= 32'b0;
+        EXMEM_preg_dummy <= 1'b1;
+        EXMEM_preg_mret <= 1'b0;
+        EXMEM_preg_misaligned <= 1'b0;
+        EXMEM_preg_addr_bits <= 2'b0;
 	end
 
 	else
 	begin
+        EXMEM_preg_muldiv <= {mux1_o_EX[31], mux3_o_EX[31], div_exception_EX, muldiv_op_EX[3:0]};
+        EXMEM_preg_PQR <= PQR_EX;
 		EXMEM_preg_imm <= mux7_o_EX;
 		EXMEM_preg_rd <= rd_EX;
 		EXMEM_preg_pc <= pc_EX;
@@ -615,7 +667,7 @@ load_store_unit LS_UNIT (.clk_i(clk_i),
                          .data_i(mux4_o_EX),
                          .length_EX_i(mem_length_EX),
                          .load_i(L),
-                         .wen_i(mem_wen_EX),
+                         .wen_i(~mem_wen_EX),
                          .misaligned_EX_i(IDEX_preg_misaligned),
                          .misaligned_MEM_i(EXMEM_preg_misaligned),
                          .read_data_i(data_i),
@@ -628,9 +680,21 @@ load_store_unit LS_UNIT (.clk_i(clk_i),
                          .misaligned_access_o(misaligned_access),
                          .memout_o(memout));
 
-assign data_req_o = L | ~mem_wen_EX; //driven high if there's a load or a store.
+assign data_req_o = L | mem_wen_EX; //driven high if there's a load or a store.
 assign data_wen_o  = mem_wen_EX;
 //MEM STAGE---------------------------------------------------------------------------------
+M_2 # (.DATA_WIDTH(32))
+MUL_2 (.PPs_i(EXMEM_preg_PQR),
+       .P_o(P_MEM)
+      );
+
+assign muldiv_MEM = EXMEM_preg_muldiv;
+assign div_exception_MEM = muldiv_MEM[4];
+assign div_exception_result_MEM = EXMEM_preg_PQR[31:0];
+
+assign PQR_MEM = div_exception_MEM ? {{32{1'b0}}, div_exception_result_MEM} : 
+                muldiv_MEM[2] ? EXMEM_preg_PQR : P_MEM;
+
 assign wb_MEM 	    = EXMEM_preg_wb;
 assign mem_MEM 	    = EXMEM_preg_mem;
 assign aluout_MEM   = EXMEM_preg_aluout;
@@ -642,10 +706,12 @@ assign csr_addr_MEM = EXMEM_preg_csr_addr;
 assign addr_bits_MEM = EXMEM_preg_addr_bits;
 assign csr_wen_MEM = wb_MEM[2];
 
-always @(posedge clk_i or negedge reset_i)
+always @(posedge clk_i)
 begin
 	if(!reset_i)
 	begin
+        MEMWB_preg_muldiv <= 7'd0;
+        MEMWB_preg_PQR <= 64'd0;        
 		MEMWB_preg_wb <= 7'h0c;
 		MEMWB_preg_csr_addr <= 12'b0;
 		MEMWB_preg_rd <= 5'b0;
@@ -658,6 +724,8 @@ begin
 
 	else if(csr_mem_flush)
 	begin
+        MEMWB_preg_muldiv <= 7'd0;    
+        MEMWB_preg_PQR <= 64'd0;
 		MEMWB_preg_wb <= 7'h0c;
 		MEMWB_preg_csr_addr <= 12'b0;
 		MEMWB_preg_rd <= 5'b0;
@@ -670,6 +738,8 @@ begin
 
 	else
 	begin
+        MEMWB_preg_muldiv <= muldiv_MEM;  
+        MEMWB_preg_PQR <= PQR_MEM;
 		MEMWB_preg_wb <= wb_MEM;
 		MEMWB_preg_rd <= rd_MEM;
 		MEMWB_preg_csr_addr <= csr_addr_MEM;
@@ -683,6 +753,15 @@ end
 //END MEM STAGE-----------------------------------------------------------------------------
 
 //WB STAGE---------------------------------------------------------------------------------
+MD_out #   (.DATA_WIDTH(32))
+MULDIV_OUT (.P_QR_i(PQR_WB),
+            .signs_i(MEMWB_preg_muldiv[6:5]),
+            .md_op_i({1'b0, MEMWB_preg_muldiv[2:0]}),
+            .md_result_o(MULDIV_result_WB)
+           );
+
+assign PQR_WB = MEMWB_preg_PQR;
+
 //assign fields
 assign wb_WB 	   = MEMWB_preg_wb;
 assign memout_WB   = MEMWB_preg_memout;
@@ -702,7 +781,7 @@ assign mux_ctrl_WB = wb_WB[6:5];
 always @(*)
 begin
 	if(mux_ctrl_WB == 2'b0)
-		mux_o_WB = aluout_WB;
+		mux_o_WB = MEMWB_preg_muldiv[3] ? (MEMWB_preg_muldiv[4] ? PQR_WB[31:0]: MULDIV_result_WB) : aluout_WB;
 
 	else if(mux_ctrl_WB == 2'b1) //load instruction
 	begin
