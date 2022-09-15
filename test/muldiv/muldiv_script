@@ -1,8 +1,9 @@
 #!/bin/sh
 
 MODULES="../../processor/barebones/barebones_wb_top.v"
-verilator --cc -Wno-lint --trace --exe muldiv_wrapper.cpp $MODULES -I../../core/ -I../../peripherals/ -I../../core/muldiv -v ../../core/muldiv/MUL_DIV_out.v \
--v ../../core/muldiv/multiplier_32.v -v ../../core/muldiv/divider_32.v --trace-max-width 3000 --trace-max-array 3000
+verilator --cc -Wno-lint --trace --exe muldiv_wrapper.cpp $MODULES -I../../core/ -I../../peripherals/ -I../../core/muldiv \
+-v ../../core/muldiv/wallace_8.v -v ../../core/muldiv/csa_16.v -v ../../core/muldiv/MD_out.v -v ../../core/muldiv/MD_in.v \
+-v ../../core/muldiv/first_one.v -v ../../core/muldiv/multiplier_16.v -v ../../core/muldiv/D.v -v ../../core/muldiv/M.v  --trace-max-width 3000 --trace-max-array 3000
 cd obj_dir
 make -s -f Vbarebones_wb_top.mk
 ./Vbarebones_wb_top

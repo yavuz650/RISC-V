@@ -25,7 +25,7 @@ int main(int argc, char** argv)
 
     barebones_wb_top->trace(tfp, 99);
     tfp->open("simx.vcd");
-	barebones_wb_top->reset_i = 1;
+	barebones_wb_top->reset_i = 0;
     barebones_wb_top->eval();
     tfp->dump(main_time);    
     main_time++;
